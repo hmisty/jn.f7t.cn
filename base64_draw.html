@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>像素画板 · 撤销/重做 + ICO 保存</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
+        }
+        body {
+            background: #eef0f5;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 12px;
+        }
+        .app-container {
+            width: 1380px;
+            max-width: 100%;
+            background: #fff;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .paned-root {
+            display: flex;
+            flex: 1;
+            min-height: 720px;
+        }
+        .left-panel {
+            flex: 2.2;
+            background: #f9fafc;
+            border-right: 1px solid #dde3ed;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            min-width: 0;
+        }
+        .right-panel {
+            flex: 1.2;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            min-width: 320px;
+        }
+        .control-panel {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 16px 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+            margin-bottom: 18px;
+            border: 1px solid #e6ecf5;
+        }
+        .size-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .size-row label {
+            font-weight: 600;
+            color: #334155;
+            font-size: 0.9rem;
+        }
+        .size-input {
+            width: 70px;
+            padding: 8px 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 40px;
+            text-align: center;
+            font-size: 14px;
+            background: #f8fafc;
+        }
+        .btn {
+            background: #f1f4f9;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 40px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.15s;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+            font-size: 13px;
+            border: 1px solid #d9e0eb;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-primary {
+            background: #3b6eff;
+            color: white;
+            border: none;
+            box-shadow: 0 4px 10px rgba(59,110,255,0.2);
+        }
+        .btn-primary:hover {
+            background: #2956d6;
+        }
+        .btn-tool {
+            min-width: 70px;
+            justify-content: center;
+        }
+        .btn-tool.active {
+            background: #3b6eff;
+            color: white;
+            border-color: #1a45c9;
+        }
+        .btn-green {
+            background: #e2f0e8;
+            color: #1a6d3c;
+            border-color: #b7dbc7;
+        }
+        .btn-green:hover {
+            background: #c9e6d6;
+        }
+        .tool-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+        .undo-redo-group {
+            margin-left: auto;
+            display: flex;
+            gap: 6px;
+        }
+        .color-box {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            border: 3px solid #fff;
+            box-shadow: 0 0 0 1px #aaa;
+            cursor: pointer;
+            transition: 0.1s;
+        }
+        .color-box:hover {
+            transform: scale(1.07);
+        }
+        .color-label {
+            font-family: 'Courier New', monospace;
+            background: #edf2f7;
+            padding: 8px 14px;
+            border-radius: 40px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .canvas-container {
+            flex: 1;
+            background: #dfe6f0;
+            border-radius: 24px;
+            padding: 18px;
+            overflow: auto;
+            border: 1px solid #cdd9e9;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        #pixelCanvas {
+            display: block;
+            background: white;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+            image-rendering: crisp-edges;
+            image-rendering: pixelated;
+            cursor: crosshair;
+            border: 1px solid #98aec6;
+        }
+        .preview-area {
+            background: #f6f9ff;
+            border-radius: 20px;
+            padding: 18px;
+            text-align: center;
+            margin-bottom: 20px;
+            border: 1px solid #dee8f5;
+        }
+        .preview-title {
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #1e293b;
+            letter-spacing: 0.3px;
+        }
+        #previewImage {
+            background: #e9eef4;
+            border-radius: 16px;
+            width: 100%;
+            max-height: 150px;
+            object-fit: contain;
+            border: 3px solid white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .options-group {
+            background: #f7faff;
+            border-radius: 18px;
+            padding: 16px;
+            border: 1px solid #dfe8f3;
+            margin-bottom: 20px;
+        }
+        .option-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .textarea-container {
+            background: #f0f5fe;
+            border-radius: 20px;
+            padding: 16px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #cfdcf0;
+        }
+        #base64Result {
+            width: 100%;
+            min-height: 200px;
+            border: none;
+            background: white;
+            border-radius: 16px;
+            padding: 14px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            resize: vertical;
+            border: 1px solid #bccfe8;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        .status-bar {
+            background: #eef3fa;
+            padding: 10px 24px;
+            font-size: 13px;
+            border-top: 1px solid #cbd6e8;
+            color: #274375;
+            font-weight: 500;
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #d9e2f0;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="paned-root">
+        <!-- 左侧绘图区 -->
+        <div class="left-panel">
+            <div class="control-panel">
+                <!-- 第一行：尺寸 + 新建 + 撤销重做 -->
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <label>行:</label>
+                        <input type="number" id="rowsInput" class="size-input" min="1" max="128" value="16">
+                        <label>列:</label>
+                        <input type="number" id="colsInput" class="size-input" min="1" max="128" value="16">
+                    </div>
+                    <button class="btn btn-primary" id="newCanvasBtn">✨ 新建画布</button>
+                    <div class="undo-redo-group">
+                        <button class="btn" id="undoBtn" title="撤销 (Ctrl+Z)">↩️ 撤销</button>
+                        <button class="btn" id="redoBtn" title="重做 (Ctrl+Y)">↪️ 重做</button>
+                    </div>
+                </div>
+
+                <div class="tool-group">
+                    <span style="font-weight:600;">工具:</span>
+                    <button class="btn btn-tool active" id="drawBtn" data-mode="draw">🖌️ 画笔</button>
+                    <button class="btn btn-tool" id="eraseBtn" data-mode="erase">🧽 橡皮</button>
+                    <button class="btn btn-tool" id="fillBtn" data-mode="fill">🪣 填充</button>
+                </div>
+
+                <div class="tool-group" style="margin-top: 12px;">
+                    <span style="font-weight:600;">颜色:</span>
+                    <div class="color-box" id="colorPickerBtn" style="background-color: #ff0000;"></div>
+                    <span class="color-label" id="colorRgbLabel">RGB(255,0,0)</span>
+                </div>
+
+                <div class="tool-group" style="margin-top: 12px; justify-content: space-between;">
+                    <span style="font-weight:600;">保存作品:</span>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        <button class="btn btn-green" id="savePngBtn">PNG</button>
+                        <button class="btn btn-green" id="saveJpgBtn">JPG</button>
+                        <button class="btn btn-green" id="saveBmpBtn">BMP</button>
+                        <button class="btn btn-green" id="saveIcoBtn" style="background: #e6dfff; color:#4a2fc1;">ICO</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 画布区域 -->
+            <div class="canvas-container" id="canvasContainer">
+                <canvas id="pixelCanvas"></canvas>
+            </div>
+        </div>
+
+        <!-- 右侧Base64区 -->
+        <div class="right-panel">
+            <h2 style="margin-top: 0; margin-bottom: 16px; font-size: 1.6rem; font-weight: 700;">Base64</h2>
+            <div class="preview-area">
+                <div class="preview-title">📸 图片预览</div>
+                <img id="previewImage" src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22100%25%22%20height%3D%22100%25%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23f0f0f0%22%2F%3E%3Ctext%20x%3D%2210%22%20y%3D%2255%22%20font-family%3D%22monospace%22%20font-size%3D%2212%22%20fill%3D%22%23999%22%3E预览%3C%2Ftext%3E%3C%2Fsvg%3E" alt="preview">
+            </div>
+
+            <div class="options-group">
+                <div class="option-item">
+                    <input type="radio" name="base64Format" id="withPrefix" value="with_prefix" checked>
+                    <label for="withPrefix">带前缀 (data:image/png;base64,)</label>
+                </div>
+                <div class="option-item">
+                    <input type="radio" name="base64Format" id="pureBase64" value="pure">
+                    <label for="pureBase64">纯Base64</label>
+                </div>
+                <button class="btn btn-primary" id="convertBtn" style="width:100%; margin-top:12px;">🔄 转换画作为Base64</button>
+            </div>
+
+            <div class="textarea-container">
+                <div style="font-weight:700; margin-bottom:8px;">📋 Base64 结果</div>
+                <textarea id="base64Result" readonly placeholder="点击转换生成…"></textarea>
+                <div class="action-buttons">
+                    <button class="btn" id="copyBtn" disabled>📎 复制</button>
+                    <button class="btn" id="saveTxtBtn" disabled>📄 保存TXT</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- 状态栏 -->
+    <div class="status-bar" id="statusBar">就绪 · 支持撤销/重做 (Ctrl+Z / Ctrl+Y)</div>
+</div>
+
+<script>
+    (function(){
+        // ----- 配置 -----
+        let rows = 16;
+        let cols = 16;
+        const PIXEL_SIZE = 20;          // 显示大小
+        let currentColor = { r:255, g:0, b:0 };
+        let mode = 'draw';
+        let drawing = false;
+
+        // 像素数据 (二维数组存 {r,g,b})
+        let pixels = [];
+
+        // ----- 撤销/重做 系统 (保存完整快照) -----
+        const MAX_HISTORY = 50;
+        let historyStack = [];           // 历史状态 (深拷贝)
+        let historyIndex = -1;            // 当前所在位置的索引
+
+        // 获取当前像素快照 (深拷贝)
+        function getSnapshot() {
+            return pixels.map(row => row.map(cell => ({r: cell.r, g: cell.g, b: cell.b})));
+        }
+
+        // 保存当前状态到历史 (通常在每次绘制动作后)
+        function pushHistory() {
+            // 如果当前索引不是最新，删除后面的分支
+            if (historyIndex < historyStack.length - 1) {
+                historyStack = historyStack.slice(0, historyIndex + 1);
+            }
+            const snap = getSnapshot();
+            historyStack.push(snap);
+            // 限制长度
+            if (historyStack.length > MAX_HISTORY) {
+                historyStack.shift();
+            }
+            historyIndex = historyStack.length - 1;
+            // 更新按钮状态 (没有禁用但可以视觉提示)
+        }
+
+        // 撤销: 回到上一个状态
+        function undo() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                pixels = historyStack[historyIndex].map(row => row.map(cell => ({r: cell.r, g: cell.g, b: cell.b})));
+                refreshCanvas();
+                statusBar.innerText = `撤销 · 历史位置 ${historyIndex+1}/${historyStack.length}`;
+            } else {
+                statusBar.innerText = '已经在最早的历史记录';
+            }
+        }
+
+        // 重做: 前进到下一个状态
+        function redo() {
+            if (historyIndex < historyStack.length - 1) {
+                historyIndex++;
+                pixels = historyStack[historyIndex].map(row => row.map(cell => ({r: cell.r, g: cell.g, b: cell.b})));
+                refreshCanvas();
+                statusBar.innerText = `重做 · 历史位置 ${historyIndex+1}/${historyStack.length}`;
+            } else {
+                statusBar.innerText = '已经是最新状态';
+            }
+        }
+
+        // 初始化历史 (第一次)
+        function resetHistory(initialPixels) {
+            historyStack = [initialPixels.map(row => row.map(c => ({r: c.r, g: c.g, b: c.b})))];
+            historyIndex = 0;
+        }
+
+        // 工具: 初始化全白画布
+        function createWhitePixels(r, c) {
+            const arr = [];
+            for (let i=0; i<r; i++) {
+                const row = [];
+                for (let j=0; j<c; j++) row.push({r:255,g:255,b:255});
+                arr.push(row);
+            }
+            return arr;
+        }
+
+        // 初始化
+        pixels = createWhitePixels(rows, cols);
+        resetHistory(pixels);
+
+        // DOM 元素
+        const canvas = document.getElementById('pixelCanvas');
+        const ctx = canvas.getContext('2d');
+        const rowsInput = document.getElementById('rowsInput');
+        const colsInput = document.getElementById('colsInput');
+        const newCanvasBtn = document.getElementById('newCanvasBtn');
+        const drawBtn = document.getElementById('drawBtn');
+        const eraseBtn = document.getElementById('eraseBtn');
+        const fillBtn = document.getElementById('fillBtn');
+        const undoBtn = document.getElementById('undoBtn');
+        const redoBtn = document.getElementById('redoBtn');
+        const colorPickerBtn = document.getElementById('colorPickerBtn');
+        const colorRgbLabel = document.getElementById('colorRgbLabel');
+        const savePngBtn = document.getElementById('savePngBtn');
+        const saveJpgBtn = document.getElementById('saveJpgBtn');
+        const saveBmpBtn = document.getElementById('saveBmpBtn');
+        const saveIcoBtn = document.getElementById('saveIcoBtn');
+        const convertBtn = document.getElementById('convertBtn');
+        const base64ResultArea = document.getElementById('base64Result');
+        const copyBtn = document.getElementById('copyBtn');
+        const saveTxtBtn = document.getElementById('saveTxtBtn');
+        const previewImage = document.getElementById('previewImage');
+        const statusBar = document.getElementById('statusBar');
+        const withPrefixRadio = document.getElementById('withPrefix');
+        const pureBase64Radio = document.getElementById('pureBase64');
+
+        let currentBase64 = '';
+
+        // ----- 绘图函数 -----
+        function drawGrid() {
+            canvas.width = cols * PIXEL_SIZE;
+            canvas.height = rows * PIXEL_SIZE;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i=0; i<rows; i++) {
+                for (let j=0; j<cols; j++) {
+                    const p = pixels[i][j];
+                    ctx.fillStyle = `rgb(${p.r},${p.g},${p.b})`;
+                    ctx.fillRect(j*PIXEL_SIZE, i*PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+                    ctx.strokeStyle = '#ccc';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(j*PIXEL_SIZE, i*PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+                }
+            }
+        }
+
+        function refreshCanvas() { drawGrid(); }
+
+        // 设置工具激活样式
+        function setActiveTool(tool) {
+            [drawBtn, eraseBtn, fillBtn].forEach(b => b.classList.remove('active'));
+            if (tool === 'draw') drawBtn.classList.add('active');
+            else if (tool === 'erase') eraseBtn.classList.add('active');
+            else if (tool === 'fill') fillBtn.classList.add('active');
+            mode = tool;
+            statusBar.innerText = `当前模式: ${tool==='draw'?'画笔':tool==='erase'?'橡皮':'填充'}`;
+        }
+
+        // 鼠标坐标转格子索引
+        function getPixelIndex(e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const canvasX = (e.clientX - rect.left) * scaleX;
+            const canvasY = (e.clientY - rect.top) * scaleY;
+            if (canvasX<0 || canvasY<0 || canvasX>=canvas.width || canvasY>=canvas.height) return null;
+            const col = Math.floor(canvasX / PIXEL_SIZE);
+            const row = Math.floor(canvasY / PIXEL_SIZE);
+            if (row<0 || row>=rows || col<0 || col>=cols) return null;
+            return {row, col};
+        }
+
+        // 填充算法 BFS
+        function floodFill(row, col, targetColor, newColor) {
+            if (targetColor.r === newColor.r && targetColor.g === newColor.g && targetColor.b === newColor.b) return;
+            const queue = [{row, col}];
+            const visited = new Set();
+            while (queue.length) {
+                const {row: r, col: c} = queue.shift();
+                const key = `${r},${c}`;
+                if (r<0 || r>=rows || c<0 || c>=cols || visited.has(key)) continue;
+                const cur = pixels[r][c];
+                if (cur.r !== targetColor.r || cur.g !== targetColor.g || cur.b !== targetColor.b) continue;
+                pixels[r][c] = {r: newColor.r, g: newColor.g, b: newColor.b};
+                visited.add(key);
+                queue.push({row: r+1, col: c});
+                queue.push({row: r-1, col: c});
+                queue.push({row: r, col: c+1});
+                queue.push({row: r, col: c-1});
+            }
+        }
+
+        // 执行绘制 (单点/填充)
+        function applyDraw(row, col, skipHistory = false) {
+            if (mode === 'draw') {
+                pixels[row][col] = {r: currentColor.r, g: currentColor.g, b: currentColor.b};
+            } else if (mode === 'erase') {
+                pixels[row][col] = {r:255,g:255,b:255};
+            } else if (mode === 'fill') {
+                const target = pixels[row][col];
+                floodFill(row, col, target, currentColor);
+            }
+            refreshCanvas();
+        }
+
+        // 封装绘制动作并自动保存历史 (用于鼠标事件)
+        function handleDrawWithHistory(row, col) {
+            if (mode === 'fill') {
+                // 填充可能改动大量格子，快照前置保存
+                pushHistory();               // 填充前的状态
+                applyDraw(row, col, true);
+            } else {
+                // 画笔/橡皮：单格，但也要保存历史 (但我们希望连续拖动只存一次？为了简单，每次鼠标松开再统一保存。但mousemove会多次触发)
+                // 方案：在mouseup时保存一次历史；绘制过程中直接修改并重绘，但历史不记录，直到松开。
+                // 我们采用：鼠标按下/拖动实时修改，不记录历史；鼠标松开时push一次历史（如果格子有变化）。
+                // 需要记录是否修改过。用dirty标记。
+                applyDraw(row, col, true);
+            }
+        }
+
+        // 鼠标事件 + 历史优化 (松开时记录)
+        let dirtySinceLastPush = false;
+
+        function onMouseDown(e) {
+            e.preventDefault();
+            drawing = true;
+            dirtySinceLastPush = false;  // 新拖拽重置
+            const idx = getPixelIndex(e);
+            if (!idx) return;
+            if (mode === 'fill') {
+                pushHistory();            // 填充前记录
+                applyDraw(idx.row, idx.col, true);
+                dirtySinceLastPush = false; // 填充已单独记录历史，不需要mouseup再存
+            } else {
+                // 画笔/橡皮: 先画一点
+                const before = pixels[idx.row][idx.col];
+                applyDraw(idx.row, idx.col, true);
+                const after = pixels[idx.row][idx.col];
+                if (before.r !== after.r || before.g !== after.g || before.b !== after.b) {
+                    dirtySinceLastPush = true;
+                }
+            }
+        }
+
+        function onMouseMove(e) {
+            if (!drawing || mode === 'fill') return;
+            const idx = getPixelIndex(e);
+            if (!idx) return;
+            const before = pixels[idx.row][idx.col];
+            applyDraw(idx.row, idx.col, true);
+            const after = pixels[idx.row][idx.col];
+            if (before.r !== after.r || before.g !== after.g || before.b !== after.b) {
+                dirtySinceLastPush = true;
+            }
+        }
+
+        function onMouseUp(e) {
+            if (drawing && dirtySinceLastPush && mode !== 'fill') {
+                pushHistory();   // 保存整个拖拽笔画
+            }
+            drawing = false;
+            dirtySinceLastPush = false;
+        }
+
+        // 注册事件
+        canvas.addEventListener('mousedown', onMouseDown);
+        canvas.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+
+        // 工具切换
+        drawBtn.addEventListener('click', () => setActiveTool('draw'));
+        eraseBtn.addEventListener('click', () => setActiveTool('erase'));
+        fillBtn.addEventListener('click', () => setActiveTool('fill'));
+
+        // 颜色选择
+        function openColorPicker() {
+            const input = document.createElement('input');
+            input.type = 'color';
+            input.value = `#${((1 << 24) + (currentColor.r << 16) + (currentColor.g << 8) + currentColor.b).toString(16).slice(1)}`;
+            input.addEventListener('input', (e) => {
+                const hex = e.target.value;
+                const r = parseInt(hex.slice(1,3), 16);
+                const g = parseInt(hex.slice(3,5), 16);
+                const b = parseInt(hex.slice(5,7), 16);
+                currentColor = {r, g, b};
+                colorPickerBtn.style.backgroundColor = `rgb(${r},${g},${b})`;
+                colorRgbLabel.innerText = `RGB(${r},${g},${b})`;
+            });
+            input.click();
+        }
+        colorPickerBtn.addEventListener('click', openColorPicker);
+
+        // 新建画布
+        newCanvasBtn.addEventListener('click', () => {
+            let r = parseInt(rowsInput.value) || 16;
+            let c = parseInt(colsInput.value) || 16;
+            r = Math.min(128, Math.max(1, r));
+            c = Math.min(128, Math.max(1, c));
+            rows = r; cols = c;
+            rowsInput.value = rows;
+            colsInput.value = cols;
+            pixels = createWhitePixels(rows, cols);
+            resetHistory(pixels);
+            refreshCanvas();
+            statusBar.innerText = `新建画布 ${rows}x${cols} · 历史已重置`;
+        });
+
+        // 撤销/重做按钮
+        undoBtn.addEventListener('click', undo);
+        redoBtn.addEventListener('click', redo);
+
+        // 键盘快捷键 Ctrl+Z / Ctrl+Y
+        window.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 'z' || e.key === 'Z') {
+                    e.preventDefault();
+                    undo();
+                } else if (e.key === 'y' || e.key === 'Y') {
+                    e.preventDefault();
+                    redo();
+                }
+            }
+        });
+
+        // 保存图片通用 (format: png, jpg, bmp, ico)
+        function saveImage(format) {
+            const offCanvas = document.createElement('canvas');
+            offCanvas.width = cols;
+            offCanvas.height = rows;
+            const offCtx = offCanvas.getContext('2d');
+            for (let i=0; i<rows; i++) {
+                for (let j=0; j<cols; j++) {
+                    const p = pixels[i][j];
+                    offCtx.fillStyle = `rgb(${p.r},${p.g},${p.b})`;
+                    offCtx.fillRect(j, i, 1, 1);
+                }
+            }
+            let mime = 'image/png';
+            let ext = 'png';
+            if (format === 'jpg') { mime = 'image/jpeg'; ext='jpg'; }
+            else if (format === 'bmp') { mime = 'image/bmp'; ext='bmp'; }
+            else if (format === 'ico') { mime = 'image/x-icon'; ext='ico'; }  // 大多数浏览器会将ico按png处理？但保存为.ico文件。
+
+            offCanvas.toBlob((blob) => {
+                if (!blob) return;
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `pixel_art.${ext}`;
+                a.click();
+                URL.revokeObjectURL(url);
+                statusBar.innerText = `保存为 .${ext} 文件`;
+            }, mime);
+        }
+
+        savePngBtn.addEventListener('click', () => saveImage('png'));
+        saveJpgBtn.addEventListener('click', () => saveImage('jpg'));
+        saveBmpBtn.addEventListener('click', () => saveImage('bmp'));
+        saveIcoBtn.addEventListener('click', () => saveImage('ico'));
+
+        // 转换Base64
+        convertBtn.addEventListener('click', () => {
+            const offCanvas = document.createElement('canvas');
+            offCanvas.width = cols;
+            offCanvas.height = rows;
+            const offCtx = offCanvas.getContext('2d');
+            for (let i=0; i<rows; i++) {
+                for (let j=0; j<cols; j++) {
+                    const p = pixels[i][j];
+                    offCtx.fillStyle = `rgb(${p.r},${p.g},${p.b})`;
+                    offCtx.fillRect(j, i, 1, 1);
+                }
+            }
+            offCanvas.toBlob((blob) => {
+                const reader = new FileReader();
+                reader.onloadend = function() {
+                    const base64 = reader.result.split(',')[1];
+                    const withPrefix = `data:image/png;base64,${base64}`;
+                    const format = withPrefixRadio.checked ? 'with_prefix' : 'pure';
+                    currentBase64 = format === 'with_prefix' ? withPrefix : base64;
+                    base64ResultArea.value = currentBase64;
+                    copyBtn.disabled = false;
+                    saveTxtBtn.disabled = false;
+
+                    // 预览缩略图
+                    const previewCanvas = document.createElement('canvas');
+                    previewCanvas.width = cols;
+                    previewCanvas.height = rows;
+                    const pCtx = previewCanvas.getContext('2d');
+                    for (let i=0; i<rows; i++) {
+                        for (let j=0; j<cols; j++) {
+                            const p = pixels[i][j];
+                            pCtx.fillStyle = `rgb(${p.r},${p.g},${p.b})`;
+                            pCtx.fillRect(j, i, 1, 1);
+                        }
+                    }
+                    previewImage.src = previewCanvas.toDataURL('image/png');
+                    statusBar.innerText = `Base64 长度: ${currentBase64.length}`;
+                };
+                reader.readAsDataURL(blob);
+            }, 'image/png');
+        });
+
+        copyBtn.addEventListener('click', () => {
+            if (!currentBase64) return;
+            navigator.clipboard.writeText(currentBase64).then(() => {
+                statusBar.innerText = '复制成功';
+            }).catch(() => alert('复制失败'));
+        });
+
+        saveTxtBtn.addEventListener('click', () => {
+            if (!currentBase64) return;
+            const blob = new Blob([currentBase64], {type: 'text/plain'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'pixel_base64.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+            statusBar.innerText = 'TXT 已保存';
+        });
+
+        // 初始化
+        refreshCanvas();
+        setActiveTool('draw');
+        resetHistory(pixels);
+
+        // 范围校验
+        rowsInput.addEventListener('change', function(){ let v=parseInt(this.value); if(v>128) this.value=128; if(v<1) this.value=1; });
+        colsInput.addEventListener('change', function(){ let v=parseInt(this.value); if(v>128) this.value=128; if(v<1) this.value=1; });
+    })();
+</script>
+</body>
+</html>
