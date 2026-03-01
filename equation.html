@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
-    <title>极简 · 线性方程组求解器 (手机自适应)</title>
+    <title>极简 · 线性方程组求解器 (最大20维)</title>
     <style>
         /* 全局重置与字体 */
         * {
@@ -17,27 +17,26 @@
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
             display: flex;
             justify-content: center;
-            align-items: flex-start;  /* 顶部对齐，更适合小屏滚动 */
+            align-items: flex-start;
             min-height: 100vh;
             margin: 0;
             padding: 12px;
         }
 
-        /* 卡片容器：真正自适应，宽度随屏幕变化，边距舒适 */
         .solver-card {
             background: white;
             width: 100%;
-            max-width: 1100px;
+            max-width: 1200px;
             border-radius: 28px;
             box-shadow: 0 20px 40px -12px rgba(0,0,0,0.25);
-            padding: clamp(16px, 5vw, 30px);  /* 动态内边距 */
+            padding: clamp(16px, 5vw, 30px);
             transition: all 0.2s;
         }
 
         h2 {
             margin: 0 0 8px 0;
             font-weight: 500;
-            font-size: clamp(1.5rem, 6vw, 1.9rem);  /* 手机略小，大屏正常 */
+            font-size: clamp(1.5rem, 6vw, 1.9rem);
             letter-spacing: -0.5px;
             color: #0b1e33;
             display: flex;
@@ -65,7 +64,6 @@
             font-weight: 500;
         }
 
-        /* 维度控制栏：在小屏上垂直堆叠 */
         .dim-controls {
             display: flex;
             flex-wrap: wrap;
@@ -82,7 +80,7 @@
             display: flex;
             flex-direction: column;
             gap: 4px;
-            flex: 1 1 auto;      /* 允许伸缩，但不强制 */
+            flex: 1 1 auto;
             min-width: 120px;
         }
 
@@ -95,8 +93,8 @@
         }
 
         .dim-item input {
-            width: 100%;          /* 撑满父容器 */
-            max-width: 120px;      /* 但也不至于太大 */
+            width: 100%;
+            max-width: 140px;
             padding: 10px 14px;
             font-size: 1rem;
             border: 1px solid #cbd5e1;
@@ -128,7 +126,7 @@
             gap: 6px;
             border: 1px solid #1e293b;
             white-space: nowrap;
-            touch-action: manipulation; /* 改善触屏 */
+            touch-action: manipulation;
         }
 
         button:hover {
@@ -145,16 +143,14 @@
             background: #f1f5f9;
         }
 
-        /* 矩阵面板：在小屏改为垂直排列 (原来grid三列) */
         .matrix-panel {
             display: flex;
-            flex-direction: column;      /* 手机默认堆叠 */
+            flex-direction: column;
             gap: 20px;
             align-items: stretch;
             margin: 20px 0 10px;
         }
 
-        /* 中等屏幕以上改为行排列 */
         @media (min-width: 640px) {
             .matrix-panel {
                 flex-direction: row;
@@ -168,8 +164,10 @@
             border-radius: 26px;
             padding: 18px 12px;
             box-shadow: 0 6px 12px rgba(0,0,0,0.02);
-            flex: 1;                    /* 等宽 */
+            flex: 1;
             width: 100%;
+            overflow-x: auto;  /* 允许水平滚动，适应大维度 */
+            -webkit-overflow-scrolling: touch;
         }
 
         .matrix-title {
@@ -184,25 +182,25 @@
 
         .grid-input {
             display: grid;
-            gap: 10px;
+            gap: 8px;
             justify-content: center;
             justify-items: center;
+            min-width: min-content; /* 保证网格不压缩 */
         }
 
-        /* 输入框自适应：使用vw配合最大最小尺寸，保证手机上可点 */
         .grid-input input {
-            width: clamp(50px, 12vw, 70px);   /* 最小50px，最大70px，中间按视口比例 */
-            height: clamp(48px, 12vw, 56px);
+            width: 65px;
+            height: 56px;
             text-align: center;
-            font-size: clamp(0.9rem, 4vw, 1rem);
+            font-size: 1rem;
             border: 1px solid #d1d9e6;
-            border-radius: 18px;
+            border-radius: 16px;
             background: #f9fbfd;
             transition: 0.1s;
             font-family: 'JetBrains Mono', 'Fira Code', monospace;
             font-weight: 400;
             padding: 0 4px;
-            -moz-appearance: textfield;   /* 去除箭头，干净 */
+            -moz-appearance: textfield;
             appearance: textfield;
         }
 
@@ -219,7 +217,6 @@
             box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
         }
 
-        /* 中间的等号：小屏隐藏或变小 */
         .eq-symbol {
             font-size: 2rem;
             font-weight: 300;
@@ -235,7 +232,6 @@
             }
         }
 
-        /* 工具栏：小屏允许换行，按钮撑开 */
         .toolbar {
             display: flex;
             gap: 12px;
@@ -250,7 +246,6 @@
             min-width: 140px;
         }
 
-        /* 示例按钮组：小屏两列布局 */
         .example-group {
             display: flex;
             flex-wrap: wrap;
@@ -268,7 +263,6 @@
             min-width: 100px;
         }
 
-        /* 结果区域 */
         .results {
             background: #f1f4f9;
             border-radius: 28px;
@@ -310,7 +304,7 @@
             word-break: break-word;
             border: 1px solid #2d3a4e;
             box-shadow: inset 0 0 0 1px #3a475b;
-            overflow-x: auto;   /* 万一方程超长可滚动 */
+            overflow-x: auto;
             -webkit-overflow-scrolling: touch;
         }
 
@@ -322,7 +316,6 @@
             padding-top: 12px;
         }
 
-        /* 小屏时一些按钮文字精简 */
         @media (max-width: 480px) {
             .desktop-only-text {
                 display: none;
@@ -333,16 +326,20 @@
             }
         }
 
-        /* 为触摸优化 */
         button, input {
             touch-action: manipulation;
         }
 
-        /* 输入网格在极窄屏下进一步缩小间距 */
-        @media (max-width: 400px) {
-            .grid-input {
-                gap: 6px;
+        /* 当维度变大时，输入框稍微缩小以容纳更多列 */
+        @media (max-width: 800px) {
+            .grid-input input {
+                width: 55px;
+                height: 50px;
+                font-size: 0.9rem;
             }
+        }
+
+        @media (max-width: 600px) {
             .grid-input input {
                 width: 48px;
                 height: 48px;
@@ -355,18 +352,17 @@
 <div class="solver-card">
     <h2>
         ⚡ 极小范数最小二乘 · n元方程组
-        <small>超定➔最小二乘 / 亚定➔通解</small>
+        <small>最大20维</small>
     </h2>
 
-    <!-- 控制区 (行/列 + 示例) 手机自适应 -->
     <div class="dim-controls">
         <div class="dim-item">
-            <label>📏 行数 (m)</label>
-            <input type="number" id="rows" min="1" max="7" value="3">
+            <label>📏 行数 (m) 1-20</label>
+            <input type="number" id="rows" min="1" max="20" value="3">
         </div>
         <div class="dim-item">
-            <label>📐 列数 (n)</label>
-            <input type="number" id="cols" min="1" max="7" value="3">
+            <label>📐 列数 (n) 1-20</label>
+            <input type="number" id="cols" min="1" max="20" value="3">
         </div>
         <button id="resizeBtn"> ⟳ 重塑</button>
         <div class="example-group">
@@ -376,7 +372,6 @@
         </div>
     </div>
 
-    <!-- 矩阵 A 和 b 区域 (手机自动堆叠) -->
     <div class="matrix-panel">
         <div class="matrix-box">
             <div class="matrix-title">
@@ -384,7 +379,7 @@
                 <span class="badge" id="aDimLabel">3×3</span>
             </div>
             <div id="aGrid" class="grid-input" style="grid-template-columns: repeat(3, 1fr);">
-                <!-- 动态生成，列数用js控制 -->
+                <!-- 动态生成 -->
             </div>
         </div>
         <div class="eq-symbol"> = </div>
@@ -420,7 +415,8 @@
 
 <script>
     (function() {
-        // ---------- 配置 ----------
+        // 最大维度改为20
+        const MAX_DIM = 20;
         let m = 3, n = 3;
 
         const rowsInput = document.getElementById('rows');
@@ -441,7 +437,6 @@
         document.getElementById('exampleOver').addEventListener('click', () => setExample(2));
         document.getElementById('exampleUnder').addEventListener('click', () => setExample(3));
 
-        // ---------- 辅助函数 ----------
         function setAValue(i, j, val) {
             const el = document.getElementById(`a_${i}_${j}`);
             if (el) el.value = val;
@@ -470,16 +465,15 @@
             }
         }
 
-        // ---------- 网格构建 ----------
         function resizeGrids() {
             const newM = parseInt(rowsInput.value, 10) || 3;
             const newN = parseInt(colsInput.value, 10) || 3;
-            m = Math.min(7, Math.max(1, newM));
-            n = Math.min(7, Math.max(1, newN));
+            m = Math.min(MAX_DIM, Math.max(1, newM));
+            n = Math.min(MAX_DIM, Math.max(1, newN));
             rowsInput.value = m;
             colsInput.value = n;
 
-            // 设置网格列数 (使用fr单位自适应)
+            // 设置网格列数
             aGridDiv.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
             let aHtml = '';
             for (let i = 0; i < m; i++) {
@@ -535,7 +529,7 @@
             }
         }
 
-        // ---------- 核心求解器 (完全保留原有算法) ----------
+        // ---------- 核心求解器 (完全保留原有算法，但适应最大20维) ----------
         function formatSolutionScalar(solArray, freeVars, nullBasis) {
             const n = solArray.length;
             if (freeVars === 0) {
