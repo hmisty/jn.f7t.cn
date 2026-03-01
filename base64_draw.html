@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=yes">
-    <title>🎨 像素工坊</title>
+    <title>🎨 像素工坊 · Jouleverse NFT</title>
     <style>
         * {
             box-sizing: border-box;
@@ -30,26 +30,24 @@
             box-shadow: 0 25px 50px rgba(0, 20, 60, 0.25);
             overflow: hidden;
             display: flex;
-            flex-direction: row;          /* 电脑横排 */
+            flex-direction: row;
             transition: all 0.2s;
         }
 
-        /* 手机竖排 (max-width: 700px) */
         @media screen and (max-width: 700px) {
             .responsive-container {
-                flex-direction: column;    /* 手机竖排 */
+                flex-direction: column;
                 border-radius: 32px;
                 max-width: 480px;
             }
         }
 
-        /* 左侧绘图区 — 电脑宽一些，手机自动 */
         .draw-panel {
             flex: 2.2;
             background: #f8faff;
             padding: 22px 20px;
             border-right: 1px solid #cfdff2;
-            min-width: 0;                 /* 防止溢出 */
+            min-width: 0;
         }
 
         @media screen and (max-width: 700px) {
@@ -60,7 +58,6 @@
             }
         }
 
-        /* 右侧Base64面板 */
         .base64-panel {
             flex: 1.2;
             background: #ffffff;
@@ -69,7 +66,6 @@
             flex-direction: column;
         }
 
-        /* 通用控件 */
         .btn {
             background: #ffffff;
             border: 1px solid #bac8e5;
@@ -159,7 +155,6 @@
             font-weight: 600;
         }
 
-        /* 画布容器 */
         .canvas-wrapper {
             background: #b7cef0;
             border-radius: 36px;
@@ -184,7 +179,6 @@
             touch-action: none;
         }
 
-        /* 右侧区域 */
         .preview-box {
             background: #f2f8ff;
             border-radius: 28px;
@@ -227,7 +221,6 @@
             margin-top: 6px;
         }
 
-        /* 导入区 */
         .import-area {
             background: #ecf2fd;
             border-radius: 28px;
@@ -247,9 +240,104 @@
             cursor: pointer;
         }
         #imageFile { display: none; }
-        }
 
         .flex-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+        .nft-mint-area {
+            background: #eaeefc;
+            border-radius: 28px;
+            padding: 18px;
+            margin-top: 18px;
+            border: 1px solid #95b3e6;
+        }
+        .nft-title {
+            font-weight: 700;
+            margin-bottom: 14px;
+            color: #0c2b5e;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .nft-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            margin: 12px 0;
+        }
+        .nft-input {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 60px;
+            border: 1px solid #a1b5dd;
+            background: white;
+            font-size: 14px;
+        }
+        .network-badge {
+            background: #2b3e6b;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .wallet-info {
+            background: #d7e4fd;
+            border-radius: 30px;
+            padding: 8px 18px;
+            font-size: 13px;
+            font-weight: 500;
+            word-break: break-all;
+        }
+        .chain-hint {
+            font-size: 12px;
+            color: #2f54a0;
+            background: #dfeaff;
+            padding: 6px 15px;
+            border-radius: 30px;
+            margin-top: 8px;
+        }
+        .my-nfts-area {
+            margin-top: 15px;
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 15px;
+            border: 1px solid #c2d0f0;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        .nft-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            border-bottom: 1px solid #e0e7ff;
+        }
+        .nft-item:last-child { border-bottom: none; }
+        .nft-item img {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background: #f0f4ff;
+            object-fit: cover;
+        }
+        .nft-item-info {
+            flex: 1;
+            font-size: 13px;
+        }
+        .nft-item-id {
+            font-weight: 600;
+            color: #1e3c8a;
+        }
+        .nft-burn-btn {
+            background: #fee2e2;
+            border: 1px solid #fecaca;
+            color: #b91c1c;
+            padding: 5px 12px;
+            border-radius: 30px;
+            font-size: 12px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -281,12 +369,10 @@
             </div>
         </div>
 
-        <!-- 画布 -->
         <div class="canvas-wrapper">
             <canvas id="pixelCanvas"></canvas>
         </div>
 
-        <!-- 新增：导入图片转像素 -->
         <div class="import-area">
             <div style="font-weight:600; margin-bottom:12px;">📤 导入图片转像素/Base64</div>
             <label for="imageFile" class="file-label" id="fileLabel">📁 选择图片 (自动缩小至画布大小)</label>
@@ -295,11 +381,11 @@
                 <button class="btn btn-small" id="importToCanvasBtn">⬇️ 导入到画布</button>
                 <button class="btn btn-small" id="importToBase64Btn">🔄 直接转Base64</button>
             </div>
-            <div style="font-size:12px; color:#3c5e9c; margin-top:8px;">* 图片会缩放到当前画布尺寸 (行列数)</div>
+            <div style="font-size:12px; color:#3c5e9c; margin-top:8px;">* 图片会缩放到当前画布尺寸</div>
         </div>
     </div>
 
-    <!-- 右侧Base64面板 -->
+    <!-- 右侧Base64面板 + NFT 铸造 -->
     <div class="base64-panel">
         <div class="preview-box">
             <div style="font-weight:700; margin-bottom:10px;">📷 预览</div>
@@ -318,21 +404,46 @@
             <button class="btn" id="copyBtn" disabled style="flex:1;">📋 复制</button>
             <button class="btn" id="saveTxtBtn" disabled style="flex:1;">💾 保存TXT</button>
         </div>
+
+        <!-- NFT 铸造区域 (已配置Jouleverse合约) -->
+        <div class="nft-mint-area">
+            <div class="nft-title">⛓️ Jouleverse NFT · PixelArt</div>
+            <div class="nft-row">
+                <span class="network-badge">Jouleverse (3666)</span>
+                <button class="btn btn-small" id="connectWalletBtn">🔌 连接钱包</button>
+            </div>
+            <div id="walletAddressDisplay" class="wallet-info" style="margin-bottom:12px;">未连接</div>
+            
+            <input type="text" id="nftNameInput" class="nft-input" placeholder="NFT 名称 (可选)" value="PixelArt #">
+            
+            <div class="nft-row" style="margin-top:15px; justify-content: space-between;">
+                <button class="btn btn-primary" id="mintNftBtn" style="flex:2;" disabled>🖼️ 铸造NFT (当前画作)</button>
+                <button class="btn btn-small" id="refreshNftBtn" style="flex:1;">🔄 刷新我的NFT</button>
+            </div>
+            
+            <!-- 显示用户拥有的NFT -->
+            <div id="myNftsContainer" class="my-nfts-area" style="display:none;">
+                <div style="font-weight:600; margin-bottom:10px;">📦 我的NFT (可销毁)</div>
+                <div id="nftList"></div>
+            </div>
+            
+            <div id="mintStatus" class="chain-hint">⚡ 准备就绪，合约地址已配置</div>
+        </div>
     </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
 <script>
     (function(){
-        // --- 配置 ---
+        // --- 像素画配置 ---
         let rows = 16, cols = 16;
-        const PIXEL_SIZE = 20;    // 逻辑像素
+        const PIXEL_SIZE = 20;
         let currentColor = { r:255, g:0, b:0 };
         let mode = 'draw';
         let drawing = false;
-
         let pixels = [];
 
-        // 历史
+        // 历史记录
         let historyStack = [];
         let historyIndex = -1;
         const MAX_HISTORY = 40;
@@ -357,14 +468,13 @@
             historyIndex = 0;
         }
 
-        // 白色背景
         function whitePixels(r,c) {
             return Array(r).fill().map(()=>Array(c).fill().map(()=>({r:255,g:255,b:255})));
         }
         pixels = whitePixels(rows, cols);
         resetHistory(pixels);
 
-        // DOM
+        // DOM 元素
         const canvas = document.getElementById('pixelCanvas');
         const ctx = canvas.getContext('2d');
         const rowsInput = document.getElementById('rowsInput');
@@ -388,14 +498,41 @@
         const previewImage = document.getElementById('previewImage');
         const withPrefix = document.querySelector('input[value="with_prefix"]');
         const pureBase64 = document.querySelector('input[value="pure"]');
-
-        // 导入相关
         const imageFileInput = document.getElementById('imageFile');
         const importToCanvasBtn = document.getElementById('importToCanvasBtn');
         const importToBase64Btn = document.getElementById('importToBase64Btn');
         const fileLabel = document.getElementById('fileLabel');
 
+        // NFT 相关
+        const connectWalletBtn = document.getElementById('connectWalletBtn');
+        const walletAddressDisplay = document.getElementById('walletAddressDisplay');
+        const mintNftBtn = document.getElementById('mintNftBtn');
+        const mintStatus = document.getElementById('mintStatus');
+        const nftNameInput = document.getElementById('nftNameInput');
+        const refreshNftBtn = document.getElementById('refreshNftBtn');
+        const myNftsContainer = document.getElementById('myNftsContainer');
+        const nftList = document.getElementById('nftList');
+
+        // Jouleverse 配置
+        const JOULE_CHAIN_ID = 3666;
+        const CONTRACT_ADDRESS = '0x6B261aaEb1D84128653838da2fcc1Bd7f42Cc92d';
+        
+        // 合约ABI (包含mint, burn, 以及查询函数)
+        const CONTRACT_ABI = [
+            "function mint(address to, string memory uri) public returns (uint256)",
+            "function burn(uint256 tokenId) public",
+            "function balanceOf(address owner) view returns (uint256)",
+            "function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)",
+            "function tokenURI(uint256 tokenId) view returns (string)",
+            "function ownerOf(uint256 tokenId) view returns (address)",
+            "function totalSupply() view returns (uint256)",
+            "event NFTMinted(address indexed to, uint256 indexed tokenId, string tokenURI)",
+            "event NFTBurned(address indexed from, uint256 indexed tokenId)"
+        ];
+
         let currentBase64 = '';
+        let provider, signer, contract;
+        let selectedAccount = null;
 
         // 绘制网格
         function drawGrid() {
@@ -414,7 +551,6 @@
         }
         function refreshCanvas() { drawGrid(); }
 
-        // 激活工具样式
         function setActive(tool) {
             [drawBtn, eraseBtn, fillBtn].forEach(b=>b.classList.remove('btn-active'));
             if(tool==='draw') drawBtn.classList.add('btn-active');
@@ -423,7 +559,6 @@
             mode = tool;
         }
 
-        // 坐标转换 (支持触摸)
         function getPixelIndex(e) {
             const rect = canvas.getBoundingClientRect();
             const scaleX = canvas.width / rect.width;
@@ -446,7 +581,6 @@
             return {row, col};
         }
 
-        // 填充
         function floodFill(row, col, target, newC) {
             if (target.r===newC.r && target.g===newC.g && target.b===newC.b) return;
             let q = [{row,col}], visited = new Set();
@@ -469,7 +603,6 @@
             refreshCanvas();
         }
 
-        // 拖拽绘制
         let dirty = false;
         function onStart(e) {
             e.preventDefault();
@@ -515,7 +648,6 @@
         eraseBtn.addEventListener('click', ()=>setActive('erase'));
         fillBtn.addEventListener('click', ()=>setActive('fill'));
 
-        // 颜色选择
         colorPickerBtn.addEventListener('click', ()=>{
             let input = document.createElement('input');
             input.type = 'color';
@@ -532,7 +664,6 @@
             input.click();
         });
 
-        // 新建
         newCanvasBtn.addEventListener('click', ()=>{
             let r = Math.min(128, Math.max(1, parseInt(rowsInput.value)||16));
             let c = Math.min(128, Math.max(1, parseInt(colsInput.value)||16));
@@ -552,7 +683,6 @@
             }
         });
 
-        // 保存图片
         function saveAs(format) {
             let off = document.createElement('canvas');
             off.width = cols; off.height = rows;
@@ -574,7 +704,6 @@
         saveBmpBtn.addEventListener('click', ()=>saveAs('bmp'));
         saveIcoBtn.addEventListener('click', ()=>saveAs('ico'));
 
-        // Base64 转换 (当前画布)
         convertBtn.addEventListener('click', ()=>{
             let off = document.createElement('canvas');
             off.width = cols; off.height = rows;
@@ -607,7 +736,6 @@
             URL.revokeObjectURL(url);
         });
 
-        // ---------- 导入图片功能 ----------
         function loadImageFile(file, callback) {
             if (!file) return;
             let reader = new FileReader();
@@ -619,14 +747,12 @@
             reader.readAsDataURL(file);
         }
 
-        // 将图片缩放到当前画布尺寸，并设置像素矩阵 (近似)
         function importImageToCanvas(img) {
             let off = document.createElement('canvas');
             off.width = cols; off.height = rows;
             let octx = off.getContext('2d');
-            octx.drawImage(img, 0, 0, cols, rows);  // 缩放到画布大小
+            octx.drawImage(img, 0, 0, cols, rows);
             let imageData = octx.getImageData(0, 0, cols, rows).data;
-            // 更新pixels
             for (let i=0; i<rows; i++) {
                 for (let j=0; j<cols; j++) {
                     let idx = (i * cols + j) * 4;
@@ -637,13 +763,12 @@
             refreshCanvas();
         }
 
-        // 直接转Base64 (使用图片本身不改变画布)
         function importToBase64Only(img) {
             let off = document.createElement('canvas');
             off.width = cols; off.height = rows;
             let octx = off.getContext('2d');
             octx.drawImage(img, 0, 0, cols, rows);
-            let base64 = off.toDataURL('image/png');  // 完整dataURL
+            let base64 = off.toDataURL('image/png');
             let pure = base64.split(',')[1];
             currentBase64 = withPrefix.checked ? base64 : pure;
             base64Result.value = currentBase64;
@@ -674,13 +799,150 @@
             });
         });
 
-        // 限制输入
         rowsInput.addEventListener('change', function(){ let v=parseInt(this.value); if(v>128) this.value=128; if(v<1) this.value=1; });
         colsInput.addEventListener('change', function(){ let v=parseInt(this.value); if(v>128) this.value=128; if(v<1) this.value=1; });
+
+        // ========== 区块链交互 ==========
+        async function connectWallet() {
+            if (!window.ethereum) {
+                alert('请安装MetaMask或兼容钱包');
+                return;
+            }
+            try {
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                await provider.send('eth_requestAccounts', []);
+                signer = provider.getSigner();
+                selectedAccount = await signer.getAddress();
+                
+                const network = await provider.getNetwork();
+                if (network.chainId !== JOULE_CHAIN_ID) {
+                    mintStatus.innerText = '⚠️ 请切换到Jouleverse网络 (ChainID 3666)';
+                    mintNftBtn.disabled = true;
+                    walletAddressDisplay.innerText = `${selectedAccount.substring(0,10)}... (错误网络)`;
+                    return;
+                }
+                
+                walletAddressDisplay.innerText = `📌 ${selectedAccount.substring(0,10)}...${selectedAccount.substring(38)}`;
+                mintNftBtn.disabled = false;
+                mintStatus.innerText = '✅ 已连接到Jouleverse';
+                
+                // 初始化合约
+                contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+                
+                // 加载用户NFT
+                loadUserNFTs();
+                myNftsContainer.style.display = 'block';
+            } catch (err) {
+                console.error(err);
+                walletAddressDisplay.innerText = '连接失败';
+            }
+        }
+
+        async function loadUserNFTs() {
+            if (!contract || !selectedAccount) return;
+            try {
+                const balance = await contract.balanceOf(selectedAccount);
+                if (balance == 0) {
+                    nftList.innerHTML = '<div style="color:#666; text-align:center;">暂无NFT，铸造一个吧</div>';
+                    return;
+                }
+                
+                let html = '';
+                for (let i = 0; i < balance; i++) {
+                    const tokenId = await contract.tokenOfOwnerByIndex(selectedAccount, i);
+                    const uri = await contract.tokenURI(tokenId);
+                    
+                    html += `
+                        <div class="nft-item">
+                            <img src="${uri.startsWith('data:') ? uri : 'data:image/svg+xml,%3Csvg...'}" onerror="this.src='data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2250%22%20height%3D%2250%22%3E%3Crect%20width%3D%2250%22%20height%3D%2250%22%20fill%3D%22%23cccccc%22%2F%3E%3C%2Fsvg%3E'">
+                            <div class="nft-item-info">
+                                <div class="nft-item-id">#${tokenId.toString()}</div>
+                                <div style="font-size:11px; color:#666;">${uri.substring(0,30)}...</div>
+                            </div>
+                            <button class="nft-burn-btn" data-tokenid="${tokenId}">🔥 销毁</button>
+                        </div>
+                    `;
+                }
+                nftList.innerHTML = html;
+                
+                // 绑定销毁事件
+                document.querySelectorAll('.nft-burn-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const tokenId = e.target.dataset.tokenid;
+                        if (confirm(`确定要销毁 NFT #${tokenId} 吗？`)) {
+                            try {
+                                const tx = await contract.burn(tokenId);
+                                mintStatus.innerText = '⏳ 销毁交易发送中...';
+                                await tx.wait();
+                                mintStatus.innerText = '✅ 销毁成功';
+                                loadUserNFTs(); // 刷新列表
+                            } catch (err) {
+                                mintStatus.innerText = `❌ 销毁失败: ${err.message.substring(0,50)}`;
+                            }
+                        }
+                    });
+                });
+            } catch (err) {
+                console.error(err);
+                nftList.innerHTML = '<div style="color:#b91c1c;">加载失败</div>';
+            }
+        }
+
+        connectWalletBtn.addEventListener('click', connectWallet);
+
+        refreshNftBtn.addEventListener('click', async () => {
+            if (!contract || !selectedAccount) {
+                mintStatus.innerText = '请先连接钱包';
+                return;
+            }
+            await loadUserNFTs();
+            mintStatus.innerText = '✅ NFT列表已刷新';
+        });
+
+        mintNftBtn.addEventListener('click', async () => {
+            if (!contract || !selectedAccount) {
+                mintStatus.innerText = '请先连接钱包';
+                return;
+            }
+            if (!currentBase64) {
+                mintStatus.innerText = '请先生成Base64 (转换当前画作)';
+                return;
+            }
+            
+            // 确保使用带前缀的格式
+            let tokenURI = currentBase64;
+            if (!tokenURI.startsWith('data:image')) {
+                tokenURI = 'data:image/png;base64,' + tokenURI;
+            }
+            
+            try {
+                mintStatus.innerText = '⏳ 铸造交易发送中...';
+                const tx = await contract.mint(selectedAccount, tokenURI);
+                mintStatus.innerText = `交易已发送: ${tx.hash.substring(0,10)}... 等待确认`;
+                await tx.wait();
+                mintStatus.innerText = `✅ 铸造成功! Token ID: ${(await contract.totalSupply()).toString()}`;
+                await loadUserNFTs();
+            } catch (err) {
+                console.error(err);
+                mintStatus.innerText = `❌ 铸造失败: ${err.message.substring(0,60)}`;
+            }
+        });
 
         // 初始化
         refreshCanvas();
         setActive('draw');
+        
+        // 预设默认Base64为空白画布
+        (function initBase64() {
+            let off = document.createElement('canvas');
+            off.width = cols; off.height = rows;
+            let octx = off.getContext('2d');
+            for(let i=0;i<rows;i++) for(let j=0;j<cols;j++) octx.fillStyle='#ffffff', octx.fillRect(j,i,1,1);
+            currentBase64 = off.toDataURL('image/png').split(',')[1];
+            currentBase64 = withPrefix.checked ? 'data:image/png;base64,' + currentBase64 : currentBase64;
+            base64Result.value = currentBase64;
+            previewImage.src = off.toDataURL('image/png');
+        })();
     })();
 </script>
 </body>
