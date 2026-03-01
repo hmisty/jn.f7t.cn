@@ -247,14 +247,6 @@
             cursor: pointer;
         }
         #imageFile { display: none; }
-
-        .status-bar {
-            background: #dfebfc;
-            padding: 16px 24px;
-            font-size: 14px;
-            font-weight: 500;
-            color: #10345e;
-            border-top: 1px solid #c2d3f0;
         }
 
         .flex-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -329,9 +321,6 @@
     </div>
 </div>
 
-<!-- 状态栏 -->
-<div class="status-bar" id="statusBar">✨ 电脑横排 · 手机竖排 · 支持导入图片转Base64</div>
-
 <script>
     (function(){
         // --- 配置 ---
@@ -358,12 +347,10 @@
             historyIndex = historyStack.length-1;
         }
         function undo() {
-            if (historyIndex > 0) { historyIndex--; pixels = historyStack[historyIndex].map(r=>r.map(c=>({...c}))); refreshCanvas(); status('撤销'); }
-            else status('已到最早');
+            if (historyIndex > 0) { historyIndex--; pixels = historyStack[historyIndex].map(r=>r.map(c=>({...c}))); refreshCanvas(); }
         }
         function redo() {
-            if (historyIndex < historyStack.length-1) { historyIndex++; pixels = historyStack[historyIndex].map(r=>r.map(c=>({...c}))); refreshCanvas(); status('重做'); }
-            else status('已到最新');
+            if (historyIndex < historyStack.length-1) { historyIndex++; pixels = historyStack[historyIndex].map(r=>r.map(c=>({...c}))); refreshCanvas(); }
         }
         function resetHistory(initial) {
             historyStack = [initial.map(r=>r.map(c=>({...c})))];
@@ -399,7 +386,6 @@
         const copyBtn = document.getElementById('copyBtn');
         const saveTxtBtn = document.getElementById('saveTxtBtn');
         const previewImage = document.getElementById('previewImage');
-        const statusBar = document.getElementById('statusBar');
         const withPrefix = document.querySelector('input[value="with_prefix"]');
         const pureBase64 = document.querySelector('input[value="pure"]');
 
@@ -410,8 +396,6 @@
         const fileLabel = document.getElementById('fileLabel');
 
         let currentBase64 = '';
-
-        function status(msg) { statusBar.innerText = msg; }
 
         // 绘制网格
         function drawGrid() {
@@ -557,7 +541,6 @@
             pixels = whitePixels(rows, cols);
             resetHistory(pixels);
             refreshCanvas();
-            status(`新建画布 ${rows}x${cols}`);
         });
 
         undoBtn.addEventListener('click', undo);
@@ -584,7 +567,6 @@
                 let a = document.createElement('a');
                 a.href = url; a.download = `pixel.${ext}`; a.click();
                 URL.revokeObjectURL(url);
-                status(`保存为 .${ext}`);
             }, mime);
         }
         savePngBtn.addEventListener('click', ()=>saveAs('png'));
@@ -608,14 +590,13 @@
                     copyBtn.disabled = false;
                     saveTxtBtn.disabled = false;
                     previewImage.src = off.toDataURL('image/png');
-                    status('Base64转换完成');
                 };
                 reader.readAsDataURL(blob);
             }, 'image/png');
         });
 
         copyBtn.addEventListener('click', ()=>{
-            if (currentBase64) { navigator.clipboard.writeText(currentBase64); status('复制成功'); }
+            if (currentBase64) { navigator.clipboard.writeText(currentBase64); }
         });
         saveTxtBtn.addEventListener('click', ()=>{
             if (!currentBase64) return;
@@ -624,7 +605,6 @@
             let a = document.createElement('a');
             a.href = url; a.download = 'base64.txt'; a.click();
             URL.revokeObjectURL(url);
-            status('TXT已保存');
         });
 
         // ---------- 导入图片功能 ----------
@@ -655,7 +635,6 @@
             }
             pushHistory();
             refreshCanvas();
-            status('图片已导入到画布');
         }
 
         // 直接转Base64 (使用图片本身不改变画布)
@@ -671,7 +650,6 @@
             copyBtn.disabled = false;
             saveTxtBtn.disabled = false;
             previewImage.src = base64;
-            status('图片已转为Base64 (未改变画布)');
         }
 
         imageFileInput.addEventListener('change', (e) => {
@@ -703,7 +681,6 @@
         // 初始化
         refreshCanvas();
         setActive('draw');
-        status('就绪 · 横竖自适应 + 图片导入');
     })();
 </script>
 </body>
