@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>极简 · 线性方程组求解器 (手机自适应)</title>
+    <style>
+        /* 全局重置与字体 */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: #f5f7fb;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;  /* 顶部对齐，更适合小屏滚动 */
+            min-height: 100vh;
+            margin: 0;
+            padding: 12px;
+        }
+
+        /* 卡片容器：真正自适应，宽度随屏幕变化，边距舒适 */
+        .solver-card {
+            background: white;
+            width: 100%;
+            max-width: 1100px;
+            border-radius: 28px;
+            box-shadow: 0 20px 40px -12px rgba(0,0,0,0.25);
+            padding: clamp(16px, 5vw, 30px);  /* 动态内边距 */
+            transition: all 0.2s;
+        }
+
+        h2 {
+            margin: 0 0 8px 0;
+            font-weight: 500;
+            font-size: clamp(1.5rem, 6vw, 1.9rem);  /* 手机略小，大屏正常 */
+            letter-spacing: -0.5px;
+            color: #0b1e33;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h2 small {
+            font-size: 0.7rem;
+            background: #e9eef3;
+            color: #2c3e5c;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-weight: 400;
+            white-space: nowrap;
+        }
+
+        .badge {
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        /* 维度控制栏：在小屏上垂直堆叠 */
+        .dim-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px 20px;
+            align-items: flex-end;
+            background: #f8fafc;
+            padding: clamp(14px, 4vw, 20px);
+            border-radius: 26px;
+            margin: 18px 0 16px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .dim-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1 1 auto;      /* 允许伸缩，但不强制 */
+            min-width: 120px;
+        }
+
+        .dim-item label {
+            font-weight: 500;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            color: #475569;
+        }
+
+        .dim-item input {
+            width: 100%;          /* 撑满父容器 */
+            max-width: 120px;      /* 但也不至于太大 */
+            padding: 10px 14px;
+            font-size: 1rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 20px;
+            background: white;
+            font-weight: 500;
+            transition: 0.15s;
+        }
+
+        .dim-item input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+        }
+
+        button {
+            background: #1e293b;
+            border: none;
+            color: white;
+            padding: 10px 22px;
+            border-radius: 40px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: 0.15s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            border: 1px solid #1e293b;
+            white-space: nowrap;
+            touch-action: manipulation; /* 改善触屏 */
+        }
+
+        button:hover {
+            background: #0f172a;
+        }
+
+        button.outline {
+            background: white;
+            color: #1e293b;
+            border: 1px solid #cbd5e1;
+        }
+
+        button.outline:hover {
+            background: #f1f5f9;
+        }
+
+        /* 矩阵面板：在小屏改为垂直排列 (原来grid三列) */
+        .matrix-panel {
+            display: flex;
+            flex-direction: column;      /* 手机默认堆叠 */
+            gap: 20px;
+            align-items: stretch;
+            margin: 20px 0 10px;
+        }
+
+        /* 中等屏幕以上改为行排列 */
+        @media (min-width: 640px) {
+            .matrix-panel {
+                flex-direction: row;
+                align-items: center;
+            }
+        }
+
+        .matrix-box {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 26px;
+            padding: 18px 12px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.02);
+            flex: 1;                    /* 等宽 */
+            width: 100%;
+        }
+
+        .matrix-title {
+            font-weight: 500;
+            margin-bottom: 14px;
+            color: #334155;
+            font-size: 0.95rem;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 6px;
+        }
+
+        .grid-input {
+            display: grid;
+            gap: 10px;
+            justify-content: center;
+            justify-items: center;
+        }
+
+        /* 输入框自适应：使用vw配合最大最小尺寸，保证手机上可点 */
+        .grid-input input {
+            width: clamp(50px, 12vw, 70px);   /* 最小50px，最大70px，中间按视口比例 */
+            height: clamp(48px, 12vw, 56px);
+            text-align: center;
+            font-size: clamp(0.9rem, 4vw, 1rem);
+            border: 1px solid #d1d9e6;
+            border-radius: 18px;
+            background: #f9fbfd;
+            transition: 0.1s;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-weight: 400;
+            padding: 0 4px;
+            -moz-appearance: textfield;   /* 去除箭头，干净 */
+            appearance: textfield;
+        }
+
+        .grid-input input::-webkit-inner-spin-button,
+        .grid-input input::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .grid-input input:focus {
+            background: white;
+            border-color: #2563eb;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+        }
+
+        /* 中间的等号：小屏隐藏或变小 */
+        .eq-symbol {
+            font-size: 2rem;
+            font-weight: 300;
+            color: #64748b;
+            text-align: center;
+            line-height: 1;
+        }
+
+        @media (max-width: 480px) {
+            .eq-symbol {
+                font-size: 1.8rem;
+                margin: -5px 0;
+            }
+        }
+
+        /* 工具栏：小屏允许换行，按钮撑开 */
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 16px;
+        }
+
+        .toolbar button {
+            flex: 1 1 auto;
+            min-width: 140px;
+        }
+
+        /* 示例按钮组：小屏两列布局 */
+        .example-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-left: auto;
+        }
+
+        .example-btn {
+            background: white;
+            border: 1px solid #cbd5e1;
+            color: #1e293b;
+            font-size: 0.8rem;
+            padding: 8px 14px;
+            flex: 1 0 auto;
+            min-width: 100px;
+        }
+
+        /* 结果区域 */
+        .results {
+            background: #f1f4f9;
+            border-radius: 28px;
+            padding: clamp(16px, 4vw, 24px);
+            margin: 28px 0 0;
+            border: 1px solid #dde3ea;
+        }
+
+        .results h3 {
+            margin: 0 0 12px 0;
+            font-weight: 500;
+            color: #0b1e33;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            font-size: clamp(1.1rem, 5vw, 1.3rem);
+        }
+
+        .status-badge {
+            font-size: 0.75rem;
+            background: #2d3b4f;
+            color: #b9c7dd;
+            padding: 4px 16px;
+            border-radius: 40px;
+            font-weight: 400;
+            white-space: nowrap;
+        }
+
+        .solution-output {
+            background: #0f1825;
+            color: #e2e8f0;
+            padding: clamp(16px, 4vw, 24px);
+            border-radius: 22px;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: clamp(0.85rem, 3.5vw, 1.1rem);
+            line-height: 1.7;
+            white-space: pre-wrap;
+            word-break: break-word;
+            border: 1px solid #2d3a4e;
+            box-shadow: inset 0 0 0 1px #3a475b;
+            overflow-x: auto;   /* 万一方程超长可滚动 */
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .info-note {
+            color: #5f6f87;
+            font-size: 0.8rem;
+            margin-top: 16px;
+            border-top: 1px dashed #bac8dc;
+            padding-top: 12px;
+        }
+
+        /* 小屏时一些按钮文字精简 */
+        @media (max-width: 480px) {
+            .desktop-only-text {
+                display: none;
+            }
+            .example-btn {
+                font-size: 0.75rem;
+                padding: 8px 6px;
+            }
+        }
+
+        /* 为触摸优化 */
+        button, input {
+            touch-action: manipulation;
+        }
+
+        /* 输入网格在极窄屏下进一步缩小间距 */
+        @media (max-width: 400px) {
+            .grid-input {
+                gap: 6px;
+            }
+            .grid-input input {
+                width: 48px;
+                height: 48px;
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="solver-card">
+    <h2>
+        ⚡ 极小范数最小二乘 · n元方程组
+        <small>超定➔最小二乘 / 亚定➔通解</small>
+    </h2>
+
+    <!-- 控制区 (行/列 + 示例) 手机自适应 -->
+    <div class="dim-controls">
+        <div class="dim-item">
+            <label>📏 行数 (m)</label>
+            <input type="number" id="rows" min="1" max="7" value="3">
+        </div>
+        <div class="dim-item">
+            <label>📐 列数 (n)</label>
+            <input type="number" id="cols" min="1" max="7" value="3">
+        </div>
+        <button id="resizeBtn"> ⟳ 重塑</button>
+        <div class="example-group">
+            <button class="outline example-btn" id="exampleSquare">📋 方阵</button>
+            <button class="outline example-btn" id="exampleOver">📈 超定</button>
+            <button class="outline example-btn" id="exampleUnder">📉 亚定</button>
+        </div>
+    </div>
+
+    <!-- 矩阵 A 和 b 区域 (手机自动堆叠) -->
+    <div class="matrix-panel">
+        <div class="matrix-box">
+            <div class="matrix-title">
+                <span>🔷 系数矩阵 A (m×n)</span>
+                <span class="badge" id="aDimLabel">3×3</span>
+            </div>
+            <div id="aGrid" class="grid-input" style="grid-template-columns: repeat(3, 1fr);">
+                <!-- 动态生成，列数用js控制 -->
+            </div>
+        </div>
+        <div class="eq-symbol"> = </div>
+        <div class="matrix-box">
+            <div class="matrix-title">
+                <span>🟦 常数列 b (m×1)</span>
+                <span class="badge" id="bDimLabel">3</span>
+            </div>
+            <div id="bGrid" class="grid-input" style="grid-template-columns: repeat(1, 1fr);">
+                <!-- 动态生成 -->
+            </div>
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <button id="solveBtn">✨ 求解 (最小二乘/通解)</button>
+        <button class="outline" id="resetBtn">♻️ 清零</button>
+    </div>
+
+    <div class="results">
+        <h3>
+            📌 解的结果
+            <span class="status-badge" id="caseLabel">待求解</span>
+        </h3>
+        <div id="solutionDisplay" class="solution-output">
+            👆 点击求解，结果以 x₁ = ... 形式展示
+        </div>
+        <div class="info-note" id="footnote">
+            * 超定方程给出最小二乘解（极小范数） | 亚定方程给出带自由参数的通解
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // ---------- 配置 ----------
+        let m = 3, n = 3;
+
+        const rowsInput = document.getElementById('rows');
+        const colsInput = document.getElementById('cols');
+        const resizeBtn = document.getElementById('resizeBtn');
+        const aGridDiv = document.getElementById('aGrid');
+        const bGridDiv = document.getElementById('bGrid');
+        const aDimLabel = document.getElementById('aDimLabel');
+        const bDimLabel = document.getElementById('bDimLabel');
+        const solveBtn = document.getElementById('solveBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const caseLabel = document.getElementById('caseLabel');
+        const solutionDisplay = document.getElementById('solutionDisplay');
+        const footnote = document.getElementById('footnote');
+
+        // 示例按钮
+        document.getElementById('exampleSquare').addEventListener('click', () => setExample(1));
+        document.getElementById('exampleOver').addEventListener('click', () => setExample(2));
+        document.getElementById('exampleUnder').addEventListener('click', () => setExample(3));
+
+        // ---------- 辅助函数 ----------
+        function setAValue(i, j, val) {
+            const el = document.getElementById(`a_${i}_${j}`);
+            if (el) el.value = val;
+        }
+        function setB(i, val) {
+            const el = document.getElementById(`b_${i}`);
+            if (el) el.value = val;
+        }
+
+        function setExample(typ) {
+            if (typ === 1) { // 3x3 唯一解
+                rowsInput.value = 3; colsInput.value = 3; resizeGrids();
+                setAValue(0,0,1); setAValue(0,1,1); setAValue(0,2,1); setB(0,6);
+                setAValue(1,0,2); setAValue(1,1,-1); setAValue(1,2,1); setB(1,3);
+                setAValue(2,0,1); setAValue(2,1,2); setAValue(2,2,-1); setB(2,2);
+            } else if (typ === 2) { // 超定 4x3
+                rowsInput.value = 4; colsInput.value = 3; resizeGrids();
+                setAValue(0,0,1); setAValue(0,1,1); setAValue(0,2,1); setB(0,3);
+                setAValue(1,0,1); setAValue(1,1,-1); setAValue(1,2,2); setB(1,0);
+                setAValue(2,0,2); setAValue(2,1,1); setAValue(2,2,-1); setB(2,1);
+                setAValue(3,0,1); setAValue(3,1,3); setAValue(3,2,2); setB(3,5);
+            } else if (typ === 3) { // 亚定 2x4
+                rowsInput.value = 2; colsInput.value = 4; resizeGrids();
+                setAValue(0,0,1); setAValue(0,1,1); setAValue(0,2,1); setAValue(0,3,1); setB(0,4);
+                setAValue(1,0,1); setAValue(1,1,-1); setAValue(1,2,2); setAValue(1,3,-1); setB(1,2);
+            }
+        }
+
+        // ---------- 网格构建 ----------
+        function resizeGrids() {
+            const newM = parseInt(rowsInput.value, 10) || 3;
+            const newN = parseInt(colsInput.value, 10) || 3;
+            m = Math.min(7, Math.max(1, newM));
+            n = Math.min(7, Math.max(1, newN));
+            rowsInput.value = m;
+            colsInput.value = n;
+
+            // 设置网格列数 (使用fr单位自适应)
+            aGridDiv.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+            let aHtml = '';
+            for (let i = 0; i < m; i++) {
+                for (let j = 0; j < n; j++) {
+                    aHtml += `<input type="number" id="a_${i}_${j}" value="0" step="any">`;
+                }
+            }
+            aGridDiv.innerHTML = aHtml;
+
+            bGridDiv.style.gridTemplateColumns = `repeat(1, 1fr)`;
+            let bHtml = '';
+            for (let i = 0; i < m; i++) {
+                bHtml += `<input type="number" id="b_${i}" value="0" step="any">`;
+            }
+            bGridDiv.innerHTML = bHtml;
+
+            aDimLabel.innerText = `${m}×${n}`;
+            bDimLabel.innerText = `${m}`;
+        }
+
+        function getMatrixA() {
+            const A = [];
+            for (let i = 0; i < m; i++) {
+                const row = [];
+                for (let j = 0; j < n; j++) {
+                    const val = parseFloat(document.getElementById(`a_${i}_${j}`).value) || 0;
+                    row.push(val);
+                }
+                A.push(row);
+            }
+            return A;
+        }
+
+        function getVectorB() {
+            const b = [];
+            for (let i = 0; i < m; i++) {
+                const val = parseFloat(document.getElementById(`b_${i}`).value) || 0;
+                b.push(val);
+            }
+            return b;
+        }
+
+        function resetToZero() {
+            for (let i = 0; i < m; i++) {
+                for (let j = 0; j < n; j++) {
+                    const el = document.getElementById(`a_${i}_${j}`);
+                    if (el) el.value = 0;
+                }
+            }
+            for (let i = 0; i < m; i++) {
+                const el = document.getElementById(`b_${i}`);
+                if (el) el.value = 0;
+            }
+        }
+
+        // ---------- 核心求解器 (完全保留原有算法) ----------
+        function formatSolutionScalar(solArray, freeVars, nullBasis) {
+            const n = solArray.length;
+            if (freeVars === 0) {
+                let lines = [];
+                for (let i = 0; i < n; i++) {
+                    lines.push(`x${i+1} = ${solArray[i].toFixed(6)}`);
+                }
+                return lines.join('\n');
+            } else {
+                let lines = [];
+                for (let i = 0; i < n; i++) {
+                    let expr = `x${i+1} = ${solArray[i].toFixed(6)}`;
+                    for (let k = 0; k < nullBasis.length; k++) {
+                        let coeff = nullBasis[k][i];
+                        if (Math.abs(coeff) < 1e-12) continue;
+                        let sign = (coeff > 0) ? ' + ' : ' - ';
+                        expr += sign + Math.abs(coeff).toFixed(6) + '·c' + (k+1);
+                    }
+                    lines.push(expr);
+                }
+                return lines.join('\n');
+            }
+        }
+
+        function matMul(A, B) {
+            let rowsA = A.length, colsA = A[0].length, colsB = B[0].length;
+            let res = Array.from({ length: rowsA }, () => Array(colsB).fill(0));
+            for (let i = 0; i < rowsA; i++) {
+                for (let j = 0; j < colsB; j++) {
+                    let s = 0;
+                    for (let k = 0; k < colsA; k++) s += A[i][k] * B[k][j];
+                    res[i][j] = s;
+                }
+            }
+            return res;
+        }
+
+        function matTranspose(A) {
+            let rows = A.length, cols = A[0].length;
+            let T = Array.from({ length: cols }, () => Array(rows).fill(0));
+            for (let i = 0; i < rows; i++) for (let j = 0; j < cols; j++) T[j][i] = A[i][j];
+            return T;
+        }
+
+        function matInverse(A) {
+            const n = A.length;
+            let aug = A.map((row, i) => row.concat(Array(n).fill(0).map((_,j) => i===j?1:0)));
+            for (let col = 0; col < n; col++) {
+                let pivot = col;
+                for (let i = col; i < n; i++) if (Math.abs(aug[i][col]) > Math.abs(aug[pivot][col])) pivot = i;
+                if (Math.abs(aug[pivot][col]) < 1e-12) return null;
+                [aug[col], aug[pivot]] = [aug[pivot], aug[col]];
+                let pivVal = aug[col][col];
+                for (let j = 0; j < 2*n; j++) aug[col][j] /= pivVal;
+                for (let i = 0; i < n; i++) {
+                    if (i !== col) {
+                        let factor = aug[i][col];
+                        for (let j = 0; j < 2*n; j++) aug[i][j] -= factor * aug[col][j];
+                    }
+                }
+            }
+            return aug.map(row => row.slice(n));
+        }
+
+        function solveOverdeterminedLeastSquares(A, b) {
+            const AT = matTranspose(A);
+            const ATA = matMul(AT, A);
+            const ATb = matMul(AT, b.map(v => [v]));
+
+            let inv = matInverse(ATA);
+            if (inv) {
+                let xVec = matMul(inv, ATb).map(row => row[0]);
+                caseLabel.innerText = `超定/方阵 最小二乘解 (满秩)`;
+                let solStr = formatSolutionScalar(xVec, 0, []);
+                solutionDisplay.innerText = solStr;
+                footnote.innerText = '✓ 最小二乘解 (使得||Ax-b||²最小)';
+            } else {
+                let lambda = 1e-8;
+                let ATA_reg = ATA.map((row,i) => row.map((val,j) => i===j ? val+lambda : val));
+                let inv_reg = matInverse(ATA_reg);
+                if (!inv_reg) {
+                    solutionDisplay.innerText = '矩阵高度奇异，无法求解';
+                    caseLabel.innerText = '奇异';
+                    return;
+                }
+                let xVec = matMul(inv_reg, ATb).map(row => row[0]);
+                caseLabel.innerText = `超定/方阵 最小范数最小二乘 (秩亏)`;
+                solutionDisplay.innerText = formatSolutionScalar(xVec, 0, []);
+                footnote.innerText = '⚠️ 最小范数最小二乘解 (加微小正则化)';
+            }
+        }
+
+        function solveUnderdeterminedRREF(A, b) {
+            const M = m, N = n;
+            let aug = A.map((row,i) => row.concat(b[i]));
+            let mat = aug.map(row => row.slice());
+            let row = 0, col = 0;
+            const pivotCols = [];
+
+            while (row < M && col < N) {
+                let sel = row;
+                for (let i = row; i < M; i++) if (Math.abs(mat[i][col]) > Math.abs(mat[sel][col])) sel = i;
+                if (Math.abs(mat[sel][col]) < 1e-12) { col++; continue; }
+                [mat[row], mat[sel]] = [mat[sel], mat[row]];
+                const pivot = mat[row][col];
+                for (let k = col; k <= N; k++) mat[row][k] /= pivot;
+                for (let i = 0; i < M; i++) {
+                    if (i !== row && Math.abs(mat[i][col]) > 1e-12) {
+                        const factor = mat[i][col];
+                        for (let k = col; k <= N; k++) mat[i][k] -= factor * mat[row][k];
+                    }
+                }
+                pivotCols.push(col);
+                row++; col++;
+            }
+
+            for (let i = 0; i < M; i++) {
+                let allZero = true;
+                for (let j = 0; j < N; j++) if (Math.abs(mat[i][j]) > 1e-10) { allZero = false; break; }
+                if (allZero && Math.abs(mat[i][N]) > 1e-10) {
+                    caseLabel.innerText = '亚定方程组无解 (不相容)';
+                    solutionDisplay.innerText = '⛔ 亚定方程矛盾，无解';
+                    footnote.innerText = '通常亚定方程若不相容则无解，请检查数据';
+                    return;
+                }
+            }
+
+            const rank = pivotCols.length;
+            const freeVars = N - rank;
+            let rrefb = mat.map(row => row[N]);
+            let specialSol = new Array(N).fill(0);
+            for (let idx = 0; idx < rank; idx++) {
+                let pivotRow = idx;
+                let pivotCol = pivotCols[idx];
+                specialSol[pivotCol] = rrefb[pivotRow];
+            }
+
+            let nullBasis = [];
+            if (freeVars > 0) {
+                let pivotSet = new Set(pivotCols);
+                for (let j = 0; j < N; j++) {
+                    if (!pivotSet.has(j)) {
+                        let vec = new Array(N).fill(0);
+                        vec[j] = 1;
+                        for (let i = 0; i < rank; i++) {
+                            let pc = pivotCols[i];
+                            let sum = 0;
+                            for (let fj = 0; fj < N; fj++) {
+                                if (!pivotSet.has(fj) && fj === j) {
+                                    sum += mat[i][fj] * 1;
+                                }
+                            }
+                            vec[pc] = -sum;
+                        }
+                        nullBasis.push(vec);
+                    }
+                }
+            }
+
+            caseLabel.innerText = `亚定方程通解 (秩 ${rank}, 自由变量 ${freeVars})`;
+            let solStr = formatSolutionScalar(specialSol, freeVars, nullBasis);
+            solutionDisplay.innerText = solStr;
+            footnote.innerText = freeVars === 0 ? '唯一解' : 'c1, c2, ... 为任意实数';
+        }
+
+        function solveSystem() {
+            const A = getMatrixA();
+            const b = getVectorB();
+
+            if (m < n) {
+                solveUnderdeterminedRREF(A, b);
+            } else {
+                solveOverdeterminedLeastSquares(A, b);
+            }
+        }
+
+        // 事件绑定
+        resizeBtn.addEventListener('click', resizeGrids);
+        solveBtn.addEventListener('click', solveSystem);
+        resetBtn.addEventListener('click', resetToZero);
+
+        // 初始化
+        resizeGrids();
+    })();
+</script>
+</body>
+</html>
