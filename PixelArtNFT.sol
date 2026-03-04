@@ -679,20 +679,22 @@ contract PixelArtNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
 
     Counters.Counter private _tokenIdCounter;
 
-    // 新增：定稿状态映射 - true表示已定稿，不可销毁
+    // 定稿状态映射 - true表示已定稿，普通用户不可销毁
     mapping(uint256 => bool) public finalized;
     
-    // 新增：定稿操作者白名单（可选，如果需要多人有权定稿）
+    // 定稿操作者白名单（可选，如果需要多人有权定稿）
     mapping(address => bool) public finalizers;
 
     // 事件：记录铸造信息
     event NFTMinted(address indexed to, uint256 indexed tokenId, string tokenURI);
     // 事件：记录销毁信息
     event NFTBurned(address indexed from, uint256 indexed tokenId);
-    // 新增：记录定稿事件
+    // 记录定稿事件
     event NFTFinalized(uint256 indexed tokenId, address indexed finalizer);
-    // 新增：记录取消定稿事件（仅所有者可用）
+    // 记录取消定稿事件（仅所有者可用）
     event NFTUnfinalized(uint256 indexed tokenId, address indexed finalizer);
+    // 记录所有者销毁已定稿NFT的事件（审核用途）
+    event OwnerBurnFinalizedNFT(uint256 indexed tokenId, address indexed owner);
 
     /**
      * @dev 构造函数
@@ -708,10 +710,11 @@ contract PixelArtNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
     }
 
     /**
-     * @dev 修改器：检查代币是否已定稿
+     * @dev 修改器：检查代币是否已定稿（普通用户）
      */
     modifier notFinalized(uint256 tokenId) {
-        require(!finalized[tokenId], "PixelArtNFT: token is finalized and cannot be modified");
+        require(!finalized[tokenId] || owner() == _msgSender(), 
+                "PixelArtNFT: token is finalized and only owner can modify");
         _;
     }
 
@@ -767,7 +770,7 @@ contract PixelArtNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
     }
 
     /**
-     * @dev 定稿NFT - 定稿后不可销毁（本人或授权定稿者均可）
+     * @dev 定稿NFT - 定稿后只有所有者可以销毁（本人或授权定稿者均可）
      * @param tokenId 要定稿的token ID
      */
     function finalize(uint256 tokenId) public canFinalize {
@@ -808,10 +811,10 @@ contract PixelArtNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
     }
 
     /**
-     * @dev 销毁NFT（本人或合约所有者均可）- 添加定稿检查
+     * @dev 销毁NFT - 普通用户不能销毁已定稿的NFT，但所有者可以
      * @param tokenId 要销毁的token ID
      */
-    function burn(uint256 tokenId) public notFinalized(tokenId) {
+    function burn(uint256 tokenId) public {
         address tokenOwner = ownerOf(tokenId);
         
         // 检查权限：必须是代币持有者或者是合约所有者
@@ -820,12 +823,18 @@ contract PixelArtNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
             "PixelArtNFT: caller is not owner nor approved nor contract owner"
         );
         
+        // 定稿检查：如果是已定稿的NFT，只有所有者可以销毁
+        if (finalized[tokenId]) {
+            require(owner() == _msgSender(), "PixelArtNFT: token is finalized and only owner can burn");
+            emit OwnerBurnFinalizedNFT(tokenId, _msgSender());
+        }
+        
         _burn(tokenId);
         emit NFTBurned(tokenOwner, tokenId);
     }
 
     /**
-     * @dev 批量销毁多个NFT（本人或合约所有者均可）- 添加定稿检查
+     * @dev 批量销毁多个NFT - 普通用户不能销毁已定稿的NFT，但所有者可以
      * @param tokenIds 要销毁的token ID数组
      */
     function burnBatch(uint256[] memory tokenIds) public {
@@ -833,10 +842,6 @@ contract PixelArtNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
         
         for (uint256 i = 0; i < tokenIds.length; i++) {
             uint256 tokenId = tokenIds[i];
-            
-            // 检查是否定稿
-            require(!finalized[tokenId], "PixelArtNFT: token is finalized and cannot be modified");
-            
             address tokenOwner = ownerOf(tokenId);
             
             // 检查权限：必须是代币持有者或者是合约所有者
@@ -844,6 +849,12 @@ contract PixelArtNFT is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
                 _isApprovedOrOwner(_msgSender(), tokenId) || owner() == _msgSender(),
                 "PixelArtNFT: caller is not owner nor approved nor contract owner"
             );
+            
+            // 定稿检查：如果是已定稿的NFT，只有所有者可以销毁
+            if (finalized[tokenId]) {
+                require(owner() == _msgSender(), "PixelArtNFT: token is finalized and only owner can burn");
+                emit OwnerBurnFinalizedNFT(tokenId, _msgSender());
+            }
             
             _burn(tokenId);
             emit NFTBurned(tokenOwner, tokenId);

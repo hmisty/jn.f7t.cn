@@ -173,22 +173,6 @@ body {
     image-rendering: pixelated;
     touch-action: none;
 }
-
-.preview-box {
-    background: #f2f8ff;
-    border-radius: 28px;
-    padding: 18px;
-    text-align: center;
-    margin-bottom: 20px;
-}
-#previewImage {
-    max-width: 100%;
-    max-height: 140px;
-    border-radius: 20px;
-    background: #e5efff;
-    padding: 5px;
-    image-rendering: pixelated;
-}
 .radio-group {
     background: #f0f6ff;
     border-radius: 40px;

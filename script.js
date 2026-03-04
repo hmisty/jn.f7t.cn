@@ -81,7 +81,6 @@
     const base64Result = document.getElementById('base64Result');
     const copyBtn = document.getElementById('copyBtn');
     const saveTxtBtn = document.getElementById('saveTxtBtn');
-    const previewImage = document.getElementById('previewImage');
     const withPrefix = document.querySelector('input[value="with_prefix"]');
     const pureBase64 = document.querySelector('input[value="pure"]');
     const imageFileInput = document.getElementById('imageFile');
@@ -634,6 +633,5 @@
         currentBase64 = off.toDataURL('image/png').split(',')[1];
         currentBase64 = withPrefix.checked ? 'data:image/png;base64,' + currentBase64 : currentBase64;
         base64Result.value = currentBase64;
-        previewImage.src = off.toDataURL('image/png');
     })();
 })();
