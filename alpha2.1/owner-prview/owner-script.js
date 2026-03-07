@@ -5,7 +5,7 @@
     // ----- 常量配置 -----
     const JOULE_CHAIN_ID = 3666;
     // 请确保下面地址与您部署的新合约地址一致！
-    const CONTRACT_ADDRESS = '0x2f74D6f474DC7C81BA863A32B1E5DfF9338ef21a'; // 替换为实际新合约地址
+    const CONTRACT_ADDRESS = '0x78e87C3b4751562cacE89cA4Bc976B448D317FE2'; 
 
     // 完整 ABI (仅包含需要的方法，与原合约一致)
     const CONTRACT_ABI = [
