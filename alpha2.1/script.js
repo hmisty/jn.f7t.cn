@@ -11,7 +11,7 @@
     
     // --- 区块链配置 ---
     const JOULE_CHAIN_ID = 3666;
-    const CONTRACT_ADDRESS = '0x2f74D6f474DC7C81BA863A32B1E5DfF9338ef21a';
+    const CONTRACT_ADDRESS = '0x78e87C3b4751562cacE89cA4Bc976B448D317FE2';
     
     // --- 合约ABI (完整版，依据 PixelArtNFT 合约生成) ---
     const CONTRACT_ABI = [
