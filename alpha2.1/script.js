@@ -13,22 +13,7 @@
     const JOULE_CHAIN_ID = 3666;
     const CONTRACT_ADDRESS = '0x2f74D6f474DC7C81BA863A32B1E5DfF9338ef21a';
     
-    // --- 状态变量 ---
-    let pixels = [];
-    let currentColor = { r: 255, g: 0, b: 0 };
-    let mode = 'draw';
-    let drawing = false;
-    let historyStack = [];
-    let historyIndex = -1;
-    let currentBase64 = '';
-    
-    // --- 区块链状态 ---
-    let provider = null;
-    let signer = null;
-    let contract = null;
-    let selectedAccount = null;
-
-    // --- 合约ABI (完整版) ---
+    // --- 合约ABI (完整版，依据 PixelArtNFT 合约生成) ---
     const CONTRACT_ABI = [
         // 基础查询
         "function name() view returns (string)",
@@ -40,7 +25,7 @@
         "function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)",
         "function totalSupply() view returns (uint256)",
         
-        // 状态查询
+        // 状态查询 (与合约完全一致)
         "function isFinalized(uint256 tokenId) view returns (bool)",
         "function isSealed(uint256 tokenId) view returns (bool)",
         
@@ -55,6 +40,21 @@
         "event NFTFinalized(uint256 indexed tokenId, address indexed finalizer)",
         "event NFTSealed(uint256 indexed tokenId, address indexed sealer)"
     ];
+
+    // --- 状态变量 ---
+    let pixels = [];
+    let currentColor = { r: 255, g: 0, b: 0 };
+    let mode = 'draw';
+    let drawing = false;
+    let historyStack = [];
+    let historyIndex = -1;
+    let currentBase64 = '';
+    
+    // --- 区块链状态 ---
+    let provider = null;
+    let signer = null;
+    let contract = null;
+    let selectedAccount = null;
 
     // --- DOM 元素 ---
     const canvas = document.getElementById('pixelCanvas');
@@ -861,7 +861,7 @@
             return;
         }
         
-        // 确保URI格式正确
+        // 确保URI格式正确 (合约要求必须是有效的URI，我们传递完整的data URI)
         let tokenURI = currentBase64;
         if (!tokenURI.startsWith('data:image')) {
             tokenURI = 'data:image/png;base64,' + tokenURI;
@@ -870,12 +870,13 @@
         try {
             mintStatus.innerText = '⏳ 铸造中...';
             
+            // 调用合约 mint 方法，铸造给自己
             const tx = await contract.mint(selectedAccount, tokenURI);
             mintStatus.innerText = `交易: ${tx.hash.slice(0, 10)}...`;
             
             await tx.wait();
             
-            // 获取新ID
+            // 获取新ID (通过事件监听更准确，但简单取 totalSupply-1 也可以)
             const totalSupply = await contract.totalSupply();
             const tokenId = totalSupply - 1;
             
@@ -884,11 +885,16 @@
             
         } catch (err) {
             console.error('铸造失败:', err);
-            mintStatus.innerText = `❌ 铸造失败: ${err.message?.slice(0, 60)}`;
+            // 提取更友好的错误信息
+            let errorMsg = err.message || '未知错误';
+            if (errorMsg.includes('execution reverted')) {
+                errorMsg = '合约拒绝：可能URI无效或已达上限';
+            }
+            mintStatus.innerText = `❌ 铸造失败: ${errorMsg.slice(0, 60)}`;
         }
     });
 
-    // ========== 初始化Base64 ==========
+    // ========== 初始化Base64 (默认白色画布) ==========
 
     (function initBase64() {
         const offCanvas = document.createElement('canvas');
