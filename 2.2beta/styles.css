@@ -361,3 +361,83 @@ body {
 .status-draft { background: #e2e8f0; color: #475569; }
 .status-finalized { background: #f59e0b; color: white; }
 .status-sealed { background: #10b981; color: white; }
+
+/* ========== 画廊入口按钮样式 ========== */
+.gallery-entry {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #3c5e9c;
+    text-align: center;
+}
+
+.btn-gallery {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 50px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-gallery:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    background: linear-gradient(135deg, #5a6fe0 0%, #6a4390 100%);
+}
+
+.btn-gallery:active {
+    transform: translateY(0);
+}
+
+.btn-gallery i, .btn-gallery span {
+    font-style: normal;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .btn-gallery {
+        padding: 10px 20px;
+        font-size: 1rem;
+        max-width: 250px;
+    }
+}
+
+/* 添加一个脉冲动画效果 */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(102, 126, 234, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(102, 126, 234, 0);
+    }
+}
+
+.btn-gallery.pulse {
+    animation: pulse 2s infinite;
+}
+
+/* 画廊按钮容器 */
+.gallery-button-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    padding: 10px;
+    background: rgba(60, 94, 156, 0.1);
+    border-radius: 60px;
+    backdrop-filter: blur(10px);
+}

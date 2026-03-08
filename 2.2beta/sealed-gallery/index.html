@@ -3,49 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎨 PixelArtNFT · 画廊</title>
+    <title>🏛️ 永恒画廊 · 已封印NFT</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <!-- 头部导航 -->
-        <header class="header">
-            <h1 class="logo">🎨 <span class="gradient-text">PixelArtNFT</span></h1>
-            <div class="nav-tabs">
-                <button class="tab-btn active" id="tabAll">🏛️ 所有NFT</button>
-                <button class="tab-btn" id="tabMy">👤 我的NFT</button>
-            </div>
-            <div class="wallet-info" id="walletInfo">
-                <span class="wallet-address" id="walletAddress">未连接</span>
-                <button class="btn-connect" id="connectBtn">🔌 连接钱包</button>
-            </div>
-        </header>
-
-        <!-- 合约信息 -->
-        <div class="contract-info">
-            <span class="badge">Jouleverse (3666)</span>
-            <span class="contract-address" id="contractAddress">0x78e87C...7FE2</span>
-            <button class="copy-btn" id="copyContractBtn">📋 复制</button>
+    <div class="gallery-container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>🏛️ 永恒画廊 · 已封印NFT</h1>
+            <button class="back-btn" onclick="window.location.href='../base64_draw.html'">← 返回绘图版</button>
         </div>
 
-        <!-- 统计卡片 -->
-        <div class="stats-card">
+        <!-- 标签切换 -->
+        <div class="tab-container">
+            <button class="tab-btn active" id="tabAll">🏛️ 所有NFT</button>
+            <button class="tab-btn" id="tabMy">👤 我的NFT</button>
+        </div>
+
+        <!-- 钱包连接 -->
+        <div class="wallet-container">
+            <span class="contract-address" id="contractAddress">0x78e87C...7FE2</span>
+            <button class="copy-btn" id="copyContractBtn">📋 复制</button>
+            <button class="connect-btn" id="connectBtn">🔌 连接钱包</button>
+            <span class="wallet-address" id="walletAddress">未连接</span>
+        </div>
+
+        <!-- 统计信息 -->
+        <div class="stats-container">
             <div class="stat-item">
                 <span class="stat-label">🔒 已封印</span>
-                <span class="stat-value" id="sealedCount">--</span>
+                <span class="stat-value" id="sealedCount">0</span>
             </div>
             <div class="stat-item">
                 <span class="stat-label">📝 已定稿</span>
-                <span class="stat-value" id="finalizedCount">--</span>
+                <span class="stat-value" id="finalizedCount">0</span>
             </div>
             <div class="stat-item">
                 <span class="stat-label">✏️ 草稿</span>
-                <span class="stat-value" id="draftCount">--</span>
+                <span class="stat-value" id="draftCount">0</span>
             </div>
             <div class="stat-item">
                 <span class="stat-label">📦 总量</span>
                 <span class="stat-value" id="totalSupply">10000</span>
+            </div>
+        </div>
+
+        <!-- 进度条 -->
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-info">
+                <span id="progressText">准备中...</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="progressBar" style="width: 0%;"></div>
             </div>
         </div>
 
@@ -54,18 +64,16 @@
             <div class="view-header">
                 <h2>🏛️ 所有NFT · 第 <span id="allCurrentPage">1</span>/100 页</h2>
                 <div class="pagination-control">
-                    <button class="page-nav" id="allFirstPage">⏮️</button>
-                    <button class="page-nav" id="allPrevPage">←</button>
-                    <span class="page-numbers" id="allPageNumbers"></span>
-                    <button class="page-nav" id="allNextPage">→</button>
-                    <button class="page-nav" id="allLastPage">⏭️</button>
+                    <button class="page-btn" id="allPrevPage">←</button>
+                    <div class="page-numbers" id="allPageNumbers"></div>
+                    <button class="page-btn" id="allNextPage">→</button>
                 </div>
             </div>
             <div class="gallery-grid" id="allGalleryGrid">
                 <div class="loading-spinner">加载中...</div>
             </div>
-            <div class="jump-bar">
-                <span>跳转页:</span>
+            <div class="jump-box">
+                <span>跳转到</span>
                 <input type="number" id="allJumpInput" min="1" max="100" value="1">
                 <button class="jump-btn" id="allJumpBtn">前往</button>
             </div>
@@ -89,8 +97,8 @@
                 <p>Token ID: <span id="transferTokenId"></span></p>
                 <input type="text" id="transferAddress" placeholder="输入接收地址 (0x...)">
                 <div class="modal-actions">
-                    <button class="btn-cancel" id="cancelTransfer">取消</button>
-                    <button class="btn-confirm" id="confirmTransfer">确认转移</button>
+                    <button class="cancel-btn" id="cancelTransfer">取消</button>
+                    <button class="confirm-btn" id="confirmTransfer">确认转移</button>
                 </div>
             </div>
         </div>

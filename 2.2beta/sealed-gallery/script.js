@@ -1,20 +1,21 @@
-// script.js - 强制通过钱包连接（解决CORS问题）
 (function() {
     'use strict';
 
-    console.log('🚀 脚本开始执行');
+    console.log('🚀 画廊启动');
 
     // ---------- 常量配置 ----------
     const JOULE_CHAIN_ID = 3666;
     const CONTRACT_ADDRESS = '0x78e87C3b4751562cacE89cA4Bc976B448D317FE2';
     
+    // Jouleverse RPC - 使用 https
+    const JOULE_RPC = 'https://rpc.jnsdao.com:8503';
+    
     const CONTRACT_ABI = [
         "function tokenURI(uint256 tokenId) view returns (string)",
         "function isFinalized(uint256 tokenId) view returns (bool)",
-        "function ownerOf(uint256 tokenId) view returns (address)",
-        "function transferFrom(address from, address to, uint256 tokenId)",
         "function balanceOf(address owner) view returns (uint256)",
-        "function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)"
+        "function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)",
+        "function transferFrom(address from, address to, uint256 tokenId)"
     ];
 
     const TOTAL_PAGES = 100;
@@ -47,10 +48,8 @@
     // 所有NFT视图
     const allGalleryGrid = document.getElementById('allGalleryGrid');
     const allCurrentPage = document.getElementById('allCurrentPage');
-    const allFirstPage = document.getElementById('allFirstPage');
     const allPrevPage = document.getElementById('allPrevPage');
     const allNextPage = document.getElementById('allNextPage');
-    const allLastPage = document.getElementById('allLastPage');
     const allPageNumbers = document.getElementById('allPageNumbers');
     const allJumpInput = document.getElementById('allJumpInput');
     const allJumpBtn = document.getElementById('allJumpBtn');
@@ -60,12 +59,23 @@
     const myNftCount = document.getElementById('myNftCount');
     const refreshMyNfts = document.getElementById('refreshMyNfts');
     
+    // 进度条
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const progressContainer = document.getElementById('progressContainer');
+    
     // 转账弹窗
     const transferModal = document.getElementById('transferModal');
     const transferTokenId = document.getElementById('transferTokenId');
     const transferAddress = document.getElementById('transferAddress');
     const cancelTransfer = document.getElementById('cancelTransfer');
     const confirmTransfer = document.getElementById('confirmTransfer');
+
+    // 检查必要元素
+    if (!allGalleryGrid) {
+        console.error('错误: 找不到 allGalleryGrid 元素');
+        return;
+    }
 
     // ---------- 状态变量 ----------
     let provider = null;
@@ -76,206 +86,113 @@
     let currentTransferTokenId = null;
 
     // 显示合约地址
-    contractAddrSpan.innerText = CONTRACT_ADDRESS.slice(0, 6) + '...' + CONTRACT_ADDRESS.slice(-4);
+    if (contractAddrSpan) {
+        contractAddrSpan.innerText = CONTRACT_ADDRESS.slice(0, 6) + '...' + CONTRACT_ADDRESS.slice(-4);
+    }
 
-    // ---------- 工具函数 ----------
+    // ---------- 更新进度条 ----------
+    function updateProgress(current, total, status) {
+        if (!progressContainer || !progressBar || !progressText) return;
+        
+        const percentage = Math.round((current / total) * 100);
+        progressBar.style.width = percentage + '%';
+        progressText.textContent = `${status} ${current}/${total} (${percentage}%)`;
+        
+        if (current >= total) {
+            setTimeout(() => {
+                progressContainer.style.opacity = '0';
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                }, 300);
+            }, 500);
+        } else {
+            progressContainer.style.display = 'block';
+            progressContainer.style.opacity = '1';
+        }
+    }
+
+    // ---------- 判断是否默认图片 ----------
     function isDefaultImage(uri) {
         if (!uri) return true;
-        // 比较前100个字符
         return uri.substring(0, 100) === DEFAULT_IMAGE.substring(0, 100);
     }
 
-    // ---------- 获取NFT状态（通过钱包连接）----------
+    // ---------- 获取NFT状态 ----------
     async function getNFTStatus(tokenId) {
         try {
-            // 1. 先查询tokenURI
             const uri = await contract.tokenURI(tokenId);
-            
-            // 2. 判断是否是默认图片
             const isSealed = !isDefaultImage(uri);
             
             if (isSealed) {
-                // 已封印：返回真实图片
                 return {
                     tokenId,
                     status: 'sealed',
-                    uri: uri,
-                    isSealed: true,
-                    isFinalized: false
+                    uri: uri
                 };
             } else {
-                // 3. 如果是默认图片，查询是否已定稿
                 const isFinalized = await contract.isFinalized(tokenId);
-                
                 return {
                     tokenId,
                     status: isFinalized ? 'finalized' : 'draft',
-                    uri: DEFAULT_IMAGE,
-                    isSealed: false,
-                    isFinalized: isFinalized
+                    uri: DEFAULT_IMAGE
                 };
             }
         } catch (error) {
-            console.warn(`查询Token #${tokenId}失败:`, error);
+            // 如果token不存在，返回draft状态
             return {
                 tokenId,
                 status: 'draft',
-                uri: DEFAULT_IMAGE,
-                isSealed: false,
-                isFinalized: false,
-                error: true
+                uri: DEFAULT_IMAGE
             };
         }
     }
 
-    // ---------- 连接钱包（必须先连接才能查看）----------
-    async function connectWallet() {
+    // ---------- 初始化RPC连接（无需钱包）----------
+    async function initRPC() {
         try {
-            if (typeof window.ethereum === 'undefined') {
-                alert('请安装MetaMask');
-                return false;
-            }
+            console.log('连接RPC:', JOULE_RPC);
             
-            // 显示加载状态
-            walletAddress.innerText = '连接中...';
+            updateProgress(0, 1, '🔄 连接RPC...');
             
-            // 创建provider
-            provider = new ethers.providers.Web3Provider(window.ethereum);
+            provider = new ethers.providers.JsonRpcProvider(JOULE_RPC, {
+                chainId: JOULE_CHAIN_ID,
+                name: 'jouleverse'
+            });
             
-            // 请求账户
-            await provider.send('eth_requestAccounts', []);
-            
-            // 检查网络
-            const network = await provider.getNetwork();
-            console.log('当前网络:', network);
-            
-            if (network.chainId !== JOULE_CHAIN_ID) {
-                alert(`请切换到Jouleverse网络 (chainId: ${JOULE_CHAIN_ID})`);
-                walletAddress.innerText = '网络错误';
-                return false;
-            }
-            
-            // 获取signer和账户
-            signer = provider.getSigner();
-            selectedAccount = await signer.getAddress();
-            walletAddress.innerText = selectedAccount.slice(0, 6) + '...' + selectedAccount.slice(-4);
-            
-            // 创建合约实例
             contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
             
-            console.log('✅ 连接成功:', selectedAccount);
+            await provider.getNetwork();
+            console.log('RPC连接成功');
             
-            // 启用所有视图
-            enableAllViews();
+            updateProgress(1, 1, '✅ 连接成功');
             
-            return true;
+            // 显示总量
+            if (totalSupplySpan) {
+                totalSupplySpan.innerText = MAX_SUPPLY;
+            }
+            
+            // 加载第一页所有NFT
+            await loadAllNFTs(1);
+            
+            // 后台加载统计数据
+            loadAllStats();
             
         } catch (error) {
-            console.error('连接钱包失败:', error);
-            walletAddress.innerText = '连接失败';
-            alert('连接钱包失败: ' + error.message);
-            return false;
+            console.error('RPC连接失败:', error);
+            if (allGalleryGrid) {
+                allGalleryGrid.innerHTML = `<div class="error-message">❌ RPC连接失败: ${error.message}</div>`;
+            }
+            updateProgress(0, 1, '❌ 连接失败');
         }
     }
 
-    // ---------- 启用所有视图（连接后）----------
-    function enableAllViews() {
-        // 移除所有禁用状态
-        allFirstPage.disabled = false;
-        allPrevPage.disabled = false;
-        allNextPage.disabled = false;
-        allLastPage.disabled = false;
-        allJumpBtn.disabled = false;
-        refreshMyNfts.disabled = false;
-        
-        // 加载第一页
-        loadAllNFTs(1);
-        
-        // 开始加载统计数据
-        loadAllStats();
-    }
-
-    // ---------- 加载所有NFT ----------
-    async function loadAllNFTs(page) {
-        if (!contract) {
-            allGalleryGrid.innerHTML = '<div class="connect-prompt">👆 请先连接钱包</div>';
-            return;
-        }
-
-        allGalleryGrid.innerHTML = '<div class="loading-spinner">🖼️ 加载NFT数据中...</div>';
-        
-        try {
-            const startId = (page - 1) * ITEMS_PER_PAGE;
-            const endId = Math.min(startId + ITEMS_PER_PAGE, MAX_SUPPLY);
-            
-            console.log(`加载页面 ${page}, Token范围: ${startId} - ${endId-1}`);
-            
-            const tokenIds = [];
-            for (let i = startId; i < endId; i++) {
-                tokenIds.push(i);
-            }
-
-            // 分批查询
-            const results = [];
-            for (let i = 0; i < tokenIds.length; i += 5) {
-                const batch = tokenIds.slice(i, i + 5);
-                const batchPromises = batch.map(tokenId => getNFTStatus(tokenId));
-                
-                const batchResults = await Promise.all(batchPromises);
-                results.push(...batchResults);
-                
-                // 更新进度
-                if (i + 5 < tokenIds.length) {
-                    allGalleryGrid.innerHTML = `<div class="loading-spinner">🖼️ 加载中... ${Math.min(i+5, tokenIds.length)}/${tokenIds.length}</div>`;
-                }
-            }
-            
-            // 生成HTML
-            let html = '';
-            for (const nft of results) {
-                const borderColor = nft.status === 'sealed' ? '#10b981' : 
-                                   nft.status === 'finalized' ? '#f59e0b' : '#6b7280';
-                const statusIcon = nft.status === 'sealed' ? '🔒' :
-                                  nft.status === 'finalized' ? '📝' : '✏️';
-                const statusText = nft.status === 'sealed' ? '已封印' :
-                                  nft.status === 'finalized' ? '已定稿' : '草稿';
-                
-                html += `
-                    <div class="nft-card status-${nft.status}" 
-                         style="border-color: ${borderColor}"
-                         title="Token #${nft.tokenId} - ${statusText}">
-                        <div class="preview-container">
-                            <img src="${nft.uri}" 
-                                 alt="#${nft.tokenId}" 
-                                 loading="lazy"
-                                 onerror="this.src='${DEFAULT_IMAGE}';">
-                        </div>
-                        <div class="token-info">
-                            <span class="token-id">#${nft.tokenId}</span>
-                            <span class="status-indicator">${statusIcon}</span>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            allGalleryGrid.innerHTML = html;
-            allCurrentPage.innerText = page;
-            updateAllPagination(page);
-            
-        } catch (error) {
-            console.error('加载失败:', error);
-            allGalleryGrid.innerHTML = `<div class="loading-spinner">❌ 加载失败: ${error.message}</div>`;
-        }
-    }
-
-    // ---------- 加载统计数据 ----------
+    // ---------- 加载所有统计数据 ----------
     async function loadAllStats() {
         if (!contract) return;
         
         try {
             let sealed = 0, finalized = 0, draft = 0;
             
-            // 只统计前1000个，避免太久
             for (let start = 0; start < 1000; start += 20) {
                 const promises = [];
                 for (let i = 0; i < 20 && start + i < 1000; i++) {
@@ -290,9 +207,9 @@
                     else draft++;
                 }
                 
-                sealedCountSpan.innerText = sealed;
-                finalizedCountSpan.innerText = finalized;
-                draftCountSpan.innerText = draft;
+                if (sealedCountSpan) sealedCountSpan.innerText = sealed;
+                if (finalizedCountSpan) finalizedCountSpan.innerText = finalized;
+                if (draftCountSpan) draftCountSpan.innerText = draft;
             }
             
             console.log(`统计(前1000): 封印=${sealed}, 定稿=${finalized}, 草稿=${draft}`);
@@ -301,58 +218,186 @@
         }
     }
 
-    // ---------- 更新分页 ----------
+    // ---------- 加载所有NFT（指定页码）----------
+    async function loadAllNFTs(page) {
+        if (!contract || !allGalleryGrid) return;
+
+        allGalleryGrid.innerHTML = '<div class="loading-spinner">🖼️ 加载NFT数据中...</div>';
+        
+        try {
+            const startId = (page - 1) * ITEMS_PER_PAGE;
+            const endId = Math.min(startId + ITEMS_PER_PAGE, MAX_SUPPLY);
+            const total = endId - startId;
+            
+            updateProgress(0, total, '🔍 查询NFT状态');
+            
+            const results = [];
+            for (let i = startId; i < endId; i += 5) {
+                const batch = [];
+                for (let j = 0; j < 5 && i + j < endId; j++) {
+                    batch.push(getNFTStatus(i + j));
+                }
+                const batchResults = await Promise.all(batch);
+                results.push(...batchResults);
+                
+                const current = i + 5 - startId;
+                if (current < total) {
+                    updateProgress(current, total, '🔍 查询NFT状态');
+                    allGalleryGrid.innerHTML = `<div class="loading-spinner">🖼️ 加载中... ${current}/${total}</div>`;
+                }
+            }
+            
+            updateProgress(total, total, '🎨 生成画廊');
+            
+            let html = '';
+            for (const nft of results) {
+                const borderColor = nft.status === 'sealed' ? '#10b981' : 
+                                   nft.status === 'finalized' ? '#f59e0b' : '#6b7280';
+                const statusIcon = nft.status === 'sealed' ? '🔒' :
+                                  nft.status === 'finalized' ? '📝' : '✏️';
+                const statusText = nft.status === 'sealed' ? '已封印' :
+                                  nft.status === 'finalized' ? '已定稿' : '草稿';
+                
+                html += `
+                    <div class="nft-card status-${nft.status}" 
+                         style="border-color: ${borderColor}"
+                         title="Token #${nft.tokenId} - ${statusText}">
+                        <img src="${nft.uri}" 
+                             alt="#${nft.tokenId}" 
+                             loading="lazy"
+                             onerror="this.src='${DEFAULT_IMAGE}'">
+                        <div class="token-id">#${nft.tokenId}</div>
+                        <div class="status-icon">${statusIcon}</div>
+                    </div>
+                `;
+            }
+            
+            allGalleryGrid.innerHTML = html;
+            
+            // 更新统计显示
+            const sealed = results.filter(n => n.status === 'sealed').length;
+            const finalized = results.filter(n => n.status === 'finalized').length;
+            const draft = results.filter(n => n.status === 'draft').length;
+            
+            if (sealedCountSpan) sealedCountSpan.innerText = sealed;
+            if (finalizedCountSpan) finalizedCountSpan.innerText = finalized;
+            if (draftCountSpan) draftCountSpan.innerText = draft;
+            
+            if (allCurrentPage) allCurrentPage.innerText = page;
+            updateAllPagination(page);
+            
+            updateProgress(total, total, '✅ 加载完成');
+            
+        } catch (error) {
+            console.error('加载失败:', error);
+            allGalleryGrid.innerHTML = `<div class="error-message">❌ 加载失败: ${error.message}</div>`;
+            updateProgress(0, 1, '❌ 加载失败');
+        }
+    }
+
+    // ---------- 更新所有NFT分页 ----------
     function updateAllPagination(page) {
+        if (!allPageNumbers) return;
+        
         let startPage = Math.max(1, page - 2);
         let endPage = Math.min(TOTAL_PAGES, page + 2);
         
-        let btnsHtml = '';
+        let html = '';
         if (startPage > 1) {
-            btnsHtml += `<button class="page-btn" data-page="1">1</button>`;
-            if (startPage > 2) btnsHtml += `<span class="page-ellipsis">...</span>`;
+            html += `<button class="page-btn" data-page="1">1</button>`;
+            if (startPage > 2) html += `<span class="ellipsis">...</span>`;
         }
         
         for (let p = startPage; p <= endPage; p++) {
-            btnsHtml += `<button class="page-btn ${p === page ? 'active' : ''}" data-page="${p}">${p}</button>`;
+            html += `<button class="page-btn ${p === page ? 'active' : ''}" data-page="${p}">${p}</button>`;
         }
         
         if (endPage < TOTAL_PAGES) {
-            if (endPage < TOTAL_PAGES - 1) btnsHtml += `<span class="page-ellipsis">...</span>`;
-            btnsHtml += `<button class="page-btn" data-page="${TOTAL_PAGES}">${TOTAL_PAGES}</button>`;
+            if (endPage < TOTAL_PAGES - 1) html += `<span class="ellipsis">...</span>`;
+            html += `<button class="page-btn" data-page="${TOTAL_PAGES}">${TOTAL_PAGES}</button>`;
         }
         
-        allPageNumbers.innerHTML = btnsHtml;
+        allPageNumbers.innerHTML = html;
         
         document.querySelectorAll('#allPageNumbers .page-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const p = parseInt(btn.dataset.page);
-                allCurrentPageNum = p;
-                loadAllNFTs(p);
+                if (!isNaN(p)) {
+                    allCurrentPageNum = p;
+                    loadAllNFTs(p);
+                }
             });
         });
+        
+        if (allPrevPage) allPrevPage.disabled = page === 1;
+        if (allNextPage) allNextPage.disabled = page === TOTAL_PAGES;
+    }
 
-        allFirstPage.disabled = page === 1;
-        allPrevPage.disabled = page === 1;
-        allNextPage.disabled = page === TOTAL_PAGES;
-        allLastPage.disabled = page === TOTAL_PAGES;
+    // ---------- 连接钱包（用于我的NFT和转账）----------
+    async function connectWallet() {
+        try {
+            if (typeof window.ethereum === 'undefined') {
+                alert('请安装MetaMask');
+                return;
+            }
+            
+            if (walletAddress) walletAddress.innerText = '连接中...';
+            
+            const web3Provider = new ethers.providers.Web3Provider(window.ethereum);
+            await web3Provider.send('eth_requestAccounts', []);
+            
+            const network = await web3Provider.getNetwork();
+            if (network.chainId !== JOULE_CHAIN_ID) {
+                alert('请切换到Jouleverse网络');
+                if (walletAddress) walletAddress.innerText = '网络错误';
+                return;
+            }
+            
+            signer = web3Provider.getSigner();
+            selectedAccount = await signer.getAddress();
+            if (walletAddress) {
+                walletAddress.innerText = selectedAccount.slice(0, 6) + '...' + selectedAccount.slice(-4);
+            }
+            
+            // 更新合约实例
+            contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, web3Provider);
+            
+            console.log('钱包连接成功:', selectedAccount);
+            
+            // 如果当前在我的NFT视图，自动加载
+            if (myView && myView.classList.contains('active')) {
+                await loadMyNFTs();
+            }
+            
+        } catch (error) {
+            console.error('连接钱包失败:', error);
+            if (walletAddress) walletAddress.innerText = '连接失败';
+            alert('连接钱包失败: ' + error.message);
+        }
     }
 
     // ---------- 加载我的NFT ----------
     async function loadMyNFTs() {
         if (!selectedAccount || !signer) {
-            myGalleryGrid.innerHTML = '<div class="connect-prompt">👆 请先连接钱包</div>';
+            if (myGalleryGrid) {
+                myGalleryGrid.innerHTML = '<div class="connect-prompt">👆 请先连接钱包</div>';
+            }
             return;
         }
 
-        myGalleryGrid.innerHTML = '<div class="loading-spinner">🖼️ 加载您的NFT...</div>';
+        if (myGalleryGrid) {
+            myGalleryGrid.innerHTML = '<div class="loading-spinner">🖼️ 加载您的NFT...</div>';
+        }
         
         try {
             const contractWithSigner = contract.connect(signer);
             const balance = await contractWithSigner.balanceOf(selectedAccount);
-            myNftCount.innerText = balance.toString();
+            if (myNftCount) myNftCount.innerText = balance.toString();
             
             if (balance.eq(0)) {
-                myGalleryGrid.innerHTML = '<div class="connect-prompt">您还没有NFT</div>';
+                if (myGalleryGrid) {
+                    myGalleryGrid.innerHTML = '<div class="connect-prompt">您还没有NFT</div>';
+                }
                 return;
             }
             
@@ -376,18 +421,17 @@
                                    nft.status === 'finalized' ? '#f59e0b' : '#6b7280';
                 const statusIcon = nft.status === 'sealed' ? '🔒' :
                                   nft.status === 'finalized' ? '📝' : '✏️';
+                const statusText = nft.status === 'sealed' ? '已封印' :
+                                  nft.status === 'finalized' ? '已定稿' : '草稿';
                 
                 html += `
                     <div class="nft-card status-${nft.status}" 
-                         style="border-color: ${borderColor}">
-                        <div class="preview-container">
-                            <img src="${nft.uri}" alt="#${nft.tokenId}" loading="lazy"
-                                 onerror="this.src='${DEFAULT_IMAGE}'">
-                        </div>
-                        <div class="token-info">
-                            <span class="token-id">#${nft.tokenId}</span>
-                            <span class="status-indicator">${statusIcon}</span>
-                        </div>
+                         style="border-color: ${borderColor}"
+                         title="Token #${nft.tokenId} - ${statusText}">
+                        <img src="${nft.uri}" alt="#${nft.tokenId}" loading="lazy"
+                             onerror="this.src='${DEFAULT_IMAGE}'">
+                        <div class="token-id">#${nft.tokenId}</div>
+                        <div class="status-icon">${statusIcon}</div>
                         <div class="card-actions">
                             <button class="transfer-btn" data-tokenid="${nft.tokenId}">🔄 转移</button>
                         </div>
@@ -395,8 +439,11 @@
                 `;
             }
             
-            myGalleryGrid.innerHTML = html;
+            if (myGalleryGrid) {
+                myGalleryGrid.innerHTML = html;
+            }
             
+            // 绑定转移按钮
             document.querySelectorAll('.transfer-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -407,16 +454,18 @@
             
         } catch (error) {
             console.error('加载我的NFT失败:', error);
-            myGalleryGrid.innerHTML = `<div class="connect-prompt">❌ 加载失败: ${error.message}</div>`;
+            if (myGalleryGrid) {
+                myGalleryGrid.innerHTML = `<div class="error-message">❌ 加载失败: ${error.message}</div>`;
+            }
         }
     }
 
     // ---------- 转账功能 ----------
     function openTransferModal(tokenId) {
         currentTransferTokenId = tokenId;
-        transferTokenId.innerText = tokenId;
-        transferAddress.value = '';
-        transferModal.classList.add('show');
+        if (transferTokenId) transferTokenId.innerText = tokenId;
+        if (transferAddress) transferAddress.value = '';
+        if (transferModal) transferModal.classList.add('show');
     }
 
     async function executeTransfer() {
@@ -432,8 +481,10 @@
             const contractWithSigner = contract.connect(signer);
             const tx = await contractWithSigner.transferFrom(selectedAccount, to, currentTransferTokenId);
             
-            transferModal.classList.remove('show');
-            myGalleryGrid.innerHTML = '<div class="loading-spinner">⏳ 交易确认中...</div>';
+            if (transferModal) transferModal.classList.remove('show');
+            if (myGalleryGrid) {
+                myGalleryGrid.innerHTML = '<div class="loading-spinner">⏳ 交易确认中...</div>';
+            }
             
             await tx.wait();
             alert('✅ 转移成功！');
@@ -442,7 +493,7 @@
         } catch (error) {
             console.error('转移失败:', error);
             alert('❌ 转移失败: ' + error.message);
-            transferModal.classList.remove('show');
+            if (transferModal) transferModal.classList.remove('show');
         } finally {
             currentTransferTokenId = null;
         }
@@ -450,113 +501,103 @@
 
     // ---------- 事件绑定 ----------
     
-    // 连接按钮
-    connectBtn.addEventListener('click', connectWallet);
-
     // 标签切换
-    tabAll.addEventListener('click', () => {
-        tabAll.classList.add('active');
-        tabMy.classList.remove('active');
-        allView.classList.add('active');
-        myView.classList.remove('active');
-        
-        // 如果已经连接，加载所有NFT
-        if (contract) {
-            loadAllNFTs(allCurrentPageNum);
-        }
-    });
+    if (tabAll && tabMy && allView && myView) {
+        tabAll.addEventListener('click', () => {
+            tabAll.classList.add('active');
+            tabMy.classList.remove('active');
+            allView.classList.add('active');
+            myView.classList.remove('active');
+        });
 
-    tabMy.addEventListener('click', () => {
-        tabMy.classList.add('active');
-        tabAll.classList.remove('active');
-        myView.classList.add('active');
-        allView.classList.remove('active');
-        
-        if (selectedAccount && contract) {
-            loadMyNFTs();
-        }
-    });
+        tabMy.addEventListener('click', () => {
+            tabMy.classList.add('active');
+            tabAll.classList.remove('active');
+            myView.classList.add('active');
+            allView.classList.remove('active');
+            
+            if (selectedAccount) {
+                loadMyNFTs();
+            } else {
+                if (myGalleryGrid) {
+                    myGalleryGrid.innerHTML = '<div class="connect-prompt">👆 请先连接钱包</div>';
+                }
+            }
+        });
+    }
 
-    copyBtn.addEventListener('click', () => {
-        navigator.clipboard.writeText(CONTRACT_ADDRESS);
-        alert('✅ 合约地址已复制');
-    });
+    // 连接钱包
+    if (connectBtn) {
+        connectBtn.addEventListener('click', connectWallet);
+    }
 
-    allFirstPage.addEventListener('click', () => {
-        if (!contract) {
-            alert('请先连接钱包');
-            return;
-        }
-        allCurrentPageNum = 1;
-        loadAllNFTs(1);
-    });
+    // 复制合约地址
+    if (copyBtn) {
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(CONTRACT_ADDRESS);
+            alert('✅ 合约地址已复制');
+        });
+    }
 
-    allPrevPage.addEventListener('click', () => {
-        if (!contract) {
-            alert('请先连接钱包');
-            return;
-        }
-        if (allCurrentPageNum > 1) {
-            allCurrentPageNum--;
-            loadAllNFTs(allCurrentPageNum);
-        }
-    });
+    // 所有NFT分页
+    if (allPrevPage) {
+        allPrevPage.addEventListener('click', () => {
+            if (allCurrentPageNum > 1) {
+                allCurrentPageNum--;
+                loadAllNFTs(allCurrentPageNum);
+            }
+        });
+    }
 
-    allNextPage.addEventListener('click', () => {
-        if (!contract) {
-            alert('请先连接钱包');
-            return;
-        }
-        if (allCurrentPageNum < TOTAL_PAGES) {
-            allCurrentPageNum++;
-            loadAllNFTs(allCurrentPageNum);
-        }
-    });
+    if (allNextPage) {
+        allNextPage.addEventListener('click', () => {
+            if (allCurrentPageNum < TOTAL_PAGES) {
+                allCurrentPageNum++;
+                loadAllNFTs(allCurrentPageNum);
+            }
+        });
+    }
 
-    allLastPage.addEventListener('click', () => {
-        if (!contract) {
-            alert('请先连接钱包');
-            return;
-        }
-        allCurrentPageNum = TOTAL_PAGES;
-        loadAllNFTs(TOTAL_PAGES);
-    });
+    if (allJumpBtn && allJumpInput) {
+        allJumpBtn.addEventListener('click', () => {
+            const page = parseInt(allJumpInput.value);
+            if (!isNaN(page) && page >= 1 && page <= TOTAL_PAGES) {
+                allCurrentPageNum = page;
+                loadAllNFTs(page);
+            }
+        });
+    }
 
-    allJumpBtn.addEventListener('click', () => {
-        if (!contract) {
-            alert('请先连接钱包');
-            return;
-        }
-        const page = parseInt(allJumpInput.value);
-        if (page >= 1 && page <= TOTAL_PAGES) {
-            allCurrentPageNum = page;
-            loadAllNFTs(page);
-        }
-    });
+    // 刷新我的NFT
+    if (refreshMyNfts) {
+        refreshMyNfts.addEventListener('click', () => {
+            if (selectedAccount) {
+                loadMyNFTs();
+            }
+        });
+    }
 
-    refreshMyNfts.addEventListener('click', () => {
-        if (selectedAccount && contract) {
-            loadMyNFTs();
-        }
-    });
-
-    cancelTransfer.addEventListener('click', () => {
-        transferModal.classList.remove('show');
-        currentTransferTokenId = null;
-    });
-
-    confirmTransfer.addEventListener('click', executeTransfer);
-
-    window.addEventListener('click', (e) => {
-        if (e.target === transferModal) {
-            transferModal.classList.remove('show');
+    // 转账弹窗
+    if (cancelTransfer) {
+        cancelTransfer.addEventListener('click', () => {
+            if (transferModal) transferModal.classList.remove('show');
             currentTransferTokenId = null;
-        }
-    });
+        });
+    }
 
-    // 初始显示
-    allGalleryGrid.innerHTML = '<div class="connect-prompt">👆 请先点击"连接钱包"</div>';
-    myGalleryGrid.innerHTML = '<div class="connect-prompt">👆 请先连接钱包</div>';
+    if (confirmTransfer) {
+        confirmTransfer.addEventListener('click', executeTransfer);
+    }
 
-    console.log('初始化完成');
+    if (transferModal) {
+        window.addEventListener('click', (e) => {
+            if (e.target === transferModal) {
+                transferModal.classList.remove('show');
+                currentTransferTokenId = null;
+            }
+        });
+    }
+
+    // 启动RPC连接（无需钱包）
+    initRPC();
 })();
