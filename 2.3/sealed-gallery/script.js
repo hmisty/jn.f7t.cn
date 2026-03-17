@@ -15,6 +15,7 @@
         "function isFinalized(uint256 tokenId) view returns (bool)",
         "function ownerOf(uint256 tokenId) view returns (address)",
         "function totalSupply() view returns (uint256)",
+        "function isSealed(uint256 tokenId) view returns (bool)", // 添加这一行
         "function balanceOf(address owner) view returns (uint256)",
         "function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)",
         "function transferFrom(address from, address to, uint256 tokenId)"
@@ -129,7 +130,7 @@
         }
     }
 
-    // ---------- 获取NFT状态（根据新规则）----------
+    // ---------- 获取NFT状态（使用合约状态判断）----------
     async function getNFTStatus(tokenId) {
         try {
             // 尝试获取tokenURI和owner
@@ -137,7 +138,7 @@
                 contract.tokenURI(tokenId).catch(() => null),
                 contract.ownerOf(tokenId).catch(() => null)
             ]);
-            
+        
             // 如果没有owner，说明ID未占用
             if (!owner) {
                 return {
@@ -149,10 +150,11 @@
                     owner: null
                 };
             }
-            
-            // 有owner，检查是否sealed（通过图片判断）
-            const isSealed = uri && !isDefaultImage(uri);
-            
+        
+            // 有owner，检查是否sealed（直接调用合约的isSealed方法）
+            const isSealed = await contract.isSealed(tokenId).catch(() => false);
+            const isFinalized = await contract.isFinalized(tokenId).catch(() => false);
+        
             if (isSealed) {
                 // SEAL后显示图片
                 return {
@@ -160,22 +162,38 @@
                     status: 'sealed',
                     displayType: '已封印',
                     displayText: '',
-                    uri: uri,
-                    owner: owner
+                    uri: uri, // 真实图片
+                    owner: owner,
+                    isSealed: true,
+                    isFinalized: true // 被封存的必然是已定稿的
                 };
-            } else {
-                // 草稿或定稿状态，显示默认值
-                const isFinalized = await contract.isFinalized(tokenId).catch(() => false);
+            } else if (isFinalized) {
+                // 已定稿但未封存
                 return {
                     tokenId,
-                    status: isFinalized ? 'finalized' : 'draft',
-                    displayType: isFinalized ? '已定稿' : '草稿',
+                    status: 'finalized',
+                    displayType: '已定稿',
                     displayText: '默认',
                     uri: DEFAULT_IMAGE,
-                    owner: owner
+                    owner: owner,
+                    isSealed: false,
+                    isFinalized: true
+                };
+            } else {
+                // 草稿状态
+                return {
+                    tokenId,
+                    status: 'draft',
+                    displayType: '草稿',
+                    displayText: '默认',
+                    uri: DEFAULT_IMAGE,
+                    owner: owner,
+                    isSealed: false,
+                    isFinalized: false
                 };
             }
         } catch (error) {
+            console.warn(`查询Token #${tokenId}状态出错:`, error);
             // 其他错误，按未占用处理
             return {
                 tokenId,

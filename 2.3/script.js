@@ -868,7 +868,7 @@
 
     // ========== 初始化Base64 (默认白色画布) ==========
 
-    (function initBase64() {
+    /*(function initBase64() {
         const offCanvas = document.createElement('canvas');
         offCanvas.width = CANVAS_SIZE;
         offCanvas.height = CANVAS_SIZE;
@@ -885,6 +885,7 @@
             previewImage.src = currentBase64;
         }
     })();
+	*/
 
     console.log('🎨 PixelArtNFT 前端初始化完成');
 })();
