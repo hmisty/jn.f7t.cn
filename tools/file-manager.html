@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>本地文件整理助手</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 36px;
+            color: #7c3aed;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .header p {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            background: white;
+            color: (124px, 58, 237, 1);
+            border: 2px solid #7c3aed;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background: #7c3aed;
+            color: white;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+        }
+
+        .tool-card {
+            background: #f8f9fa;
+            border: 2px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 30px;
+            transition: all 0.2s;
+        }
+
+        .tool-card:hover {
+            border-color: #7c3aed;
+            box-shadow: 0 8px 24px rgba(124, 58, 237, 0.15);
+            transform: translateY(-4px);
+        }
+
+        .tool-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .tool-icon {
+            font-size: 48px;
+        }
+
+        . .tool-title {
+            font-size: 22px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .tool-desc {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .input-area {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .input-area textarea {
+            width: 100%;
+            height: 100px;
+            border: none;
+            resize: vertical;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            padding: 10px;
+            border-radius: 5px;
+            background: #f8f9fa;
+        }
+
+        .input-area textarea:focus {
+            outline: none;
+            background: #eef2ff;
+        }
+
+        .input-area input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .input-area input:focus {
+            outline: none;
+            border-color: #7c3aed;
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+        }
+
+        .action-btn {
+            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-right: 10px;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(124, 58, 237, 0.3);
+        }
+
+        .result-area {
+            background: white;
+            border: 2px solid #7c3aed;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .result-area h4 {
+            color: #7c3aed;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .result-content {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #333;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+
+        .tips {
+            background: linear-gradient(145deg, #f5f3ff 0%, #ede9fe 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+
+        .tips h3 {
+            color: #7c3aed;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+
+        .tips ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .tips li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .tips li::before {
+            content: '✓';
+            position: absolute;
+            left: 5px;
+            color: #7c3aed;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 30px 20px;
+            }
+            .header h1 {
+                font-size: 28px;
+            }
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+            .back-btn {
+                position: relative;
+                margin-bottom: 20px;
+                top: 0;
+                left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button class="back-btn" onclick="location.href='../index.html'">← 返回</button>
+        
+        <div class="header">
+            <h1>📁 本地文件整理助手</h1>
+            <p>批量重命名 · 文件分类 · 整理建议</p>
+        </div>
+
+        <div class="content-grid">
+            <!-- 批量重命名 -->
+            <div class="tool-card">
+                <div class="tool-header">
+                    <span class="tool-icon">✏️</span>
+                    <span class="tool-title">批量重命名</span>
+                </div>
+                <div class="tool-desc">
+                    输入文件列表，设置命名规则，生成重命名方案
+                </div>
+                
+                <div class="input-area">
+                    <textarea id="fileList" placeholder="输入文件名列表（每行一个）：
+示例：
+IMG_001.jpg
+IMG_002.jpg
+IMG_003.jpg"></textarea>
+                </div>
+                
+                <div class="input-area">
+                    <input type="text" id="renamePrefix" placeholder="前缀（如：photo_）">
+                </div>
+                
+                <div class="input-area">
+                    <input type="text" id="renameSuffix" placeholder="后缀（如：_backup）">
+                </div>
+                
+                <button class="action-btn" onclick="generateRename()">🔄 生成方案</button>
+                
+                <div class="result-area" id="renameResult" style="display: none;">
+                    <h4>重命名方案：</h4>
+                    <div class="result-content" id="renameContent"></div>
+                </div>
+            </div>
+
+            <!-- 文件分类建议 -->
+            <div class="tool-card">
+                <div class="tool-header">
+                    <span class="tool-icon">📂</span>
+                    <span class="tool-title">文件分类建议</span>
+                </div>
+                <div class="tool-desc">
+                    根据文件类型，生成合理的文件夹分类方案
+                </div>
+                
+                <div class="input-area">
+                    <textarea id="fileTypes" placeholder="输入文件扩展名（每行一个）：
+示例：
+.jpg
+.png
+.pdf
+.docx
+.mp3
+.mp4"></textarea>
+                </div>
+                
+                <button class="action-btn" onclick="generateCategories()">📊 生成分类</button>
+                
+                <div class="result-area" id="categoryResult" style="display: none;">
+                    <h4>分类建议：</h4>
+                    <div class="result-content" id="categoryContent"></div>
+                </div>
+            </div>
+
+            <!-- 文件大小转换 -->
+            <div class="tool-card">
+                <div class="tool-header">
+                    <span class="tool-icon">💾</span>
+                    <span class="tool-title">文件大小计算</span>
+                </div>
+                <div class="tool-desc">
+                    计算和转换文件大小单位
+                </div>
+                
+                <div class="input-area">
+                    <input type="number" id="fileSize" placeholder="输入文件大小数值" min="0">
+                </div>
+                
+                <div class="input-area">
+                    <select id="sizeUnit" style="width: 100%; padding: 10px; border: 2px solid #e5e7eb; border-radius: 8px;">
+                        <option value="B">字节 (B)</option>
+                        <option value="KB">千字节 (KB)</option>
+                        <option value="MB">兆字节 (MB)</option>
+                        <option value="GB">吉字节 (GB)</option>
+                        <option value="TB">太字节 (TB)</option>
+                    </select>
+                </div>
+                
+                <button class="action-btn" onclick="calculateSize()">🔢 计算</button>
+                
+                <div class="result-area" id="sizeResult" style="display: none;">
+                    <h4>转换结果：</h4>
+                    <div class="result-content" id="sizeContent"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tips">
+            <h3>💡 文件整理小贴士</h3>
+            <ul>
+                <li>定期清理下载文件夹，删除不需要的文件</li>
+                <li>使用有意义的文件名，避免特殊字符</li>
+                <li>按类别创建文件夹，便于查找和管理</li>
+                <li>定期备份重要文件到云存储或外部硬盘</li>
+                <li>使用版本控制管理重要文档</li>
+                <li>删除重复文件节省存储空间</li>
+                <li>压缩不常用的文件以节省空间</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function generateRename() {
+            const fileList = document.getElementById('fileList').value.trim();
+            const prefix = document.getElementById('renamePrefix').value.trim();
+            const suffix = document.getElementById('renameSuffix').value.trim();
+            
+            if (!fileList) {
+                alert('请输入文件名列表');
+                return;
+            }
+
+            const files = fileList.split('\n').filter(f => f.trim());
+            let result = '';
+            
+            files.forEach((file, index) => {
+                const ext = file.includes('.') ? '.' + file.split('.').pop() : '';
+                const newName = `${prefix}${String(index + 1).padStart(3, '0')}${suffix}${ext}`;
+                result += `${file} → ${newName}\n`;
+            });
+
+            document.getElementById('renameContent').textContent = result;
+            document.getElementById('renameResult').style.display = 'block';
+        }
+
+        function generateCategories() {
+            const fileTypes = document.getElementById('fileTypes').value.trim();
+            
+            if (!fileTypes) {
+                alert('请输入文件扩展名');
+                return;
+            }
+
+            const types = fileTypes.split('\n').filter(t => t.trim());
+            let result = '';
+            
+            const categories = {
+                '图片': ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp'],
+                '文档': ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt'],
+                '音频': ['.mp3', '.wav', '.flac', '.aac', '.ogg'],
+                '视频': ['.mp4', '.avi', '.mkv', '.mov', '.wmv'],
+                '压缩包': ['.zip', '.rar', '.7z', '.tar', '.gz'],
+                '代码': ['.js', '.html', '.css', '.py', '.java', '.cpp', '.c'],
+                '数据': ['.json', '.xml', '.csv', '.sql', '.db'],
+                '其他': []
+            };
+
+            // 找出未分类的
+            const categorized = Object.values(categories).flat();
+            const uncategorized = types.filter(t => !categorized.includes(t.toLowerCase()));
+            
+            result += '建议的文件夹结构：\n\n';
+            
+            Object.entries(categories).forEach(([category, exts]) => {
+                if (exts.length > 0) {
+                    result += `📁 ${category}/\n`;
+                    exts.forEach(ext => {
+                        result += `   └── ${ext}\n`;
+                    });
+                    result += '\n';
+                }
+            });
+
+            if (uncategorized.length > 0) {
+                result += `📁 其他/\n`;
+                uncategorized.forEach(ext => {
+                    result += `   └── ${ext}\n`;
+                });
+            }
+
+            document.getElementById('categoryContent').textContent = result;
+            document.getElementById('categoryResult').style.display = 'block';
+        }
+
+        function calculateSize() {
+            const size = parseFloat(document.getElementById('fileSize').value);
+            const unit = document.getElementById('sizeUnit').value;
+            
+            if (isNaN(size) || size < 0) {
+                alert('请输入有效的文件大小');
+                return;
+            }
+
+            const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+            let bytes = size;
+            
+            // 转换为字节
+            const startIndex = units.indexOf(unit);
+            for (let i = 0; i < startIndex; i++) {
+                bytes *= 1024;
+            }
+
+            let result = `原始大小：${size} ${unit}\n\n`;
+            result += '转换结果：\n\n';
+            
+            units.forEach((u, index) => {
+                const converted = bytes / Math.pow(1024, index);
+                if (converted >= 1) {
+                    result += `${converted.toFixed(2).padStart(10)} ${u}\n`;
+                }
+            });
+
+            // 文件数量估算
+            result += '\n';
+            result += '文件数量估算（假设每个文件）：\n\n';
+            
+            const estimates = [
+                { size: 1024, name: '1KB 文本文件' },
+                { size: 1024 * 1024, name: '1MB 图片' },
+                { size: 1024 * 1024 * 10, name: '10MB 音乐' },
+                { size: 1024 * 1024 * 100, name: '100MB 视频' },
+                { size: 1024 * 1024 * 500, name: '500MB 视频' }
+            ];
+
+            estimates.forEach(est => {
+                const count = Math.floor(bytes / est.size);
+                result += `   可以存储约 ${count.toLocaleString()} 个 ${est.name}\n`;
+            });
+
+            document.getElementById('sizeContent').textContent = result;
+            document.getElementById('sizeResult').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
